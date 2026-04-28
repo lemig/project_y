@@ -1,0 +1,97 @@
+#!/usr/bin/env bash
+# dev-status — Show what's running for THIS workspace and basic health.
+
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+if [ ! -f .env.ports ]; then
+  echo "No .env.ports — run bin/dev-init first."
+  exit 1
+fi
+
+# shellcheck source=/dev/null
+source .env.ports
+export COMPOSE_PROJECT_NAME
+
+echo "Workspace: ${WORKSPACE_NAME}"
+echo "COMPOSE_PROJECT_NAME: ${COMPOSE_PROJECT_NAME}"
+echo ""
+echo "Ports (this workspace):"
+echo "  ALEPH_UI_PORT (+0)  = ${ALEPH_UI_PORT}   ← open in browser"
+echo "  ALEPH_API_PORT (+1) = ${ALEPH_API_PORT}"
+echo "  API_PORT (+2)       = ${API_PORT}   (project_y, reserved)"
+echo "  UI_PORT (+3)        = ${UI_PORT}   (project_y dev UI, reserved)"
+echo "  ALEPH_POSTGRES_PORT = ${ALEPH_POSTGRES_PORT}"
+echo "  ALEPH_ES_PORT       = ${ALEPH_ES_PORT}"
+echo "  ALEPH_REDIS_PORT    = ${ALEPH_REDIS_PORT}"
+echo ""
+
+echo "Containers (${COMPOSE_PROJECT_NAME}):"
+docker ps --filter "label=com.docker.compose.project=${COMPOSE_PROJECT_NAME}" \
+  --format "  {{.Names}}\t{{.Status}}\t{{.Ports}}"
+echo ""
+
+# Health probes
+echo "Health probes:"
+
+# What you'll actually interact with FIRST:
+# Aleph UI
+if curl -sf "http://localhost:${ALEPH_UI_PORT}/" -o /dev/null 2>&1; then
+  echo "  ✓ Aleph UI         http://localhost:${ALEPH_UI_PORT}     ← open this in your browser"
+else
+  echo "  ✗ Aleph UI         http://localhost:${ALEPH_UI_PORT}     (not ready yet — first start takes ~1-2 min for migrations)"
+fi
+
+# Aleph API
+if curl -sf "http://localhost:${ALEPH_API_PORT}/api/2/metadata" -o /dev/null 2>&1; then
+  echo "  ✓ Aleph API        http://localhost:${ALEPH_API_PORT}/api/2/"
+else
+  echo "  ✗ Aleph API        http://localhost:${ALEPH_API_PORT}/api/2/  (not ready yet)"
+fi
+
+# Infrastructure layer (you usually don't need to touch these directly):
+# Elasticsearch
+if curl -sf "${ALEPH_ES_URL}/_cluster/health" -o /dev/null 2>&1; then
+  ES_HEALTH=$(curl -s "${ALEPH_ES_URL}/_cluster/health" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('status','?'))" 2>/dev/null || echo "?")
+  echo "  ✓ Elasticsearch    ${ALEPH_ES_URL}                          → ${ES_HEALTH}"
+else
+  echo "  ✗ Elasticsearch    ${ALEPH_ES_URL}                          → DOWN"
+fi
+
+# Postgres — TCP probe (no pg_isready CLI required on host)
+if (echo > "/dev/tcp/localhost/${ALEPH_POSTGRES_PORT}") 2>/dev/null; then
+  echo "  ✓ Postgres         localhost:${ALEPH_POSTGRES_PORT}                                → accepting connections"
+else
+  if nc -z -w 1 localhost "${ALEPH_POSTGRES_PORT}" 2>/dev/null; then
+    echo "  ✓ Postgres         localhost:${ALEPH_POSTGRES_PORT}                                → accepting connections"
+  else
+    echo "  ✗ Postgres         localhost:${ALEPH_POSTGRES_PORT}                                → DOWN"
+  fi
+fi
+
+# Redis
+if (echo PING; sleep 0.1) | nc -w 1 localhost "${ALEPH_REDIS_PORT}" 2>/dev/null | grep -q PONG; then
+  echo "  ✓ Redis            localhost:${ALEPH_REDIS_PORT}                                → PONG"
+else
+  echo "  ✗ Redis            localhost:${ALEPH_REDIS_PORT}                                → DOWN (or nc missing)"
+fi
+
+echo ""
+echo "Migration job (one-shot; runs on first start, then exits):"
+# Look at exited aleph-init containers (compose keeps them after exit unless --remove-orphans).
+# Inspect by container-name pattern since `compose ps` doesn't list exited one-shots cleanly.
+INIT_INFO=$(docker ps -a --filter "label=com.docker.compose.project=${COMPOSE_PROJECT_NAME}" --filter "label=com.docker.compose.service=aleph-init" --format "{{.Status}}" | head -1)
+if [ -z "$INIT_INFO" ]; then
+  # Container may have been removed (e.g., --remove-orphans). If api/ui are up, init must have succeeded.
+  if docker ps --filter "label=com.docker.compose.project=${COMPOSE_PROJECT_NAME}" --filter "label=com.docker.compose.service=api" --format "{{.Names}}" | grep -q . ; then
+    echo "  ✓ aleph-init      completed (inferred — api/ui are running, which require successful init)"
+  else
+    echo "  ? aleph-init      no record found"
+  fi
+else
+  case "$INIT_INFO" in
+    *Exited\ \(0\)*) echo "  ✓ aleph-init      ${INIT_INFO}" ;;
+    *Exited*)        echo "  ✗ aleph-init      ${INIT_INFO} ← migrations FAILED, check 'docker compose -f docker-compose.aleph.yml logs aleph-init'" ;;
+    *)               echo "    aleph-init      ${INIT_INFO}" ;;
+  esac
+fi

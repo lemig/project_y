@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+# dev-down — Stop the project_y dev environment for THIS workspace.
+#
+# By default, preserves Docker volumes (so you keep your indexed corpus,
+# Postgres data, etc. across restarts). Pass --purge to also remove volumes.
+
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+if [ ! -f .env.ports ]; then
+  echo "No .env.ports — nothing to stop."
+  exit 0
+fi
+
+# shellcheck source=/dev/null
+source .env.ports
+export COMPOSE_PROJECT_NAME
+
+PURGE=0
+for arg in "$@"; do
+  case "$arg" in
+    --purge|-p) PURGE=1 ;;
+    *) ;;
+  esac
+done
+
+COMPOSE_ARGS="-f docker-compose.aleph.yml"
+if [ -f docker-compose.yml ]; then
+  COMPOSE_ARGS="${COMPOSE_ARGS} -f docker-compose.yml"
+fi
+
+if [ "$PURGE" -eq 1 ]; then
+  echo "Stopping AND PURGING volumes for workspace '${WORKSPACE_NAME}' (COMPOSE_PROJECT_NAME=${COMPOSE_PROJECT_NAME})..."
+  # shellcheck disable=SC2086
+  docker compose ${COMPOSE_ARGS} down -v
+  echo "Stopped and volumes removed."
+else
+  echo "Stopping workspace '${WORKSPACE_NAME}' (COMPOSE_PROJECT_NAME=${COMPOSE_PROJECT_NAME})..."
+  # shellcheck disable=SC2086
+  docker compose ${COMPOSE_ARGS} down
+  echo "Stopped. Volumes preserved. (Use --purge to also remove volumes.)"
+fi
