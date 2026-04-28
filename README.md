@@ -29,13 +29,13 @@ Each Conductor workspace gets its own port-offset Aleph stack so multiple worksp
 | +11    | Aleph Elasticsearch                                  |
 | +12    | Aleph Redis                                          |
 
-Base port comes from `CONDUCTOR_PORT` (set by Conductor per workspace; defaults to 8000 if unset). Containers + Docker volumes are isolated per workspace via `COMPOSE_PROJECT_NAME=project_y-${API_PORT}`.
+Base port comes from `CONDUCTOR_PORT` (set by Conductor per workspace; defaults to 8000 if unset). Containers + Docker volumes are isolated per workspace via `COMPOSE_PROJECT_NAME=project_y-${ALEPH_UI_PORT}` (e.g., `project_y-55000`).
 
 `server/.env` symlinks to `~/projects/project_y/server/.env` if it exists, so secrets like `LLM_API_KEY` are shared across workspaces without duplication. Falls back to copying `server/.env.example` if the shared location is empty.
 
 ## Architecture
 
-See the design doc at `~/.gstack/projects/lemig-project_y/cabermi-aleph-investigator-design-20260427-213606.md` and the strategic plan at `~/.gstack/projects/lemig-project_y/ceo-plans/2026-04-27-aleph-investigator-v2.md`.
+For full project context see `CLAUDE.md` at the repo root (architectural premises, locked decisions, note schema, the 9 review rounds that produced the current design). For the long-form design doc + strategic plan, see `~/.gstack/projects/lemig-project_y/cabermi-aleph-investigator-design-20260427-213606.md` and `~/.gstack/projects/lemig-project_y/ceo-plans/2026-04-27-aleph-investigator-v2.md` (these are user-local artifacts, not committed to git).
 
 Short version:
 - **Substrate:** OpenAleph + Follow the Money data model (REST API only; no AGPL imports).
