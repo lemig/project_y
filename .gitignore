@@ -1,0 +1,40 @@
+# Per-workspace generated files (written by bin/dev-init)
+.env.ports
+aleph.env.docker
+
+# Real env files with secrets
+server/.env
+*.env.local
+
+# Data + caches (per-workspace; not committed)
+data/*
+!data/.gitkeep
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+dist/
+build/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Editor / OS
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# Conductor / dev artifacts
+.vite.pid
+node_modules/
+
+# Docker compose override (per-developer)
+docker-compose.override.yml

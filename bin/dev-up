@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+# dev-up — Start the project_y dev environment for THIS workspace.
+#
+# Brings up the Aleph stack (Postgres + Elasticsearch + Redis + workers)
+# at port offsets specific to this Conductor workspace. Containers and
+# volumes are isolated per workspace via COMPOSE_PROJECT_NAME.
+#
+# project_y's own FastAPI agent service is added in docker-compose.yml
+# once the Python project is scaffolded (TODO).
+
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+if [ ! -f .env.ports ]; then
+  echo "Run bin/dev-init first."
+  exit 1
+fi
+
+# Source .env.ports to get COMPOSE_PROJECT_NAME and per-workspace ports
+# shellcheck source=/dev/null
+source .env.ports
+export COMPOSE_PROJECT_NAME PROJECT_ROOT WORKSPACE_NAME
+export API_PORT UI_PORT
+export ALEPH_POSTGRES_PORT ALEPH_ES_PORT ALEPH_REDIS_PORT ALEPH_API_PORT ALEPH_UI_PORT
+export ALEPH_POSTGRES_URL ALEPH_ES_URL ALEPH_REDIS_URL
+
+# Compose files: aleph stack always; project_y stack only if file exists
+COMPOSE_ARGS="-f docker-compose.aleph.yml"
+if [ -f docker-compose.yml ]; then
+  COMPOSE_ARGS="${COMPOSE_ARGS} -f docker-compose.yml"
+fi
+
+echo "Starting project_y dev environment for workspace '${WORKSPACE_NAME}'..."
+echo "  COMPOSE_PROJECT_NAME = ${COMPOSE_PROJECT_NAME}"
+echo ""
+echo "  → Open in your browser: http://localhost:${ALEPH_UI_PORT}"
+echo ""
+echo "  Other endpoints:"
+echo "    Aleph API     → http://localhost:${ALEPH_API_PORT}/api/2/"
+echo "    Postgres      → localhost:${ALEPH_POSTGRES_PORT}"
+echo "    Elasticsearch → ${ALEPH_ES_URL}"
+echo "    Redis         → redis://localhost:${ALEPH_REDIS_PORT}"
+echo ""
+
+# shellcheck disable=SC2086
+docker compose ${COMPOSE_ARGS} up -d --remove-orphans
+
+echo ""
+echo "Stack is starting up. First start runs DB migrations (~1-2 min)."
+echo "Use 'bin/dev-status' to see health, 'bin/dev-down' to stop."
+echo ""
+echo "Open in browser when ready:  http://localhost:${ALEPH_UI_PORT}"

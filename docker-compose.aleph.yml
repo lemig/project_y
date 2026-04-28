@@ -1,0 +1,201 @@
+# =============================================================================
+# Aleph FULL stack for project_y — per-workspace, port-offset
+# =============================================================================
+# Adapted from openaleph/openaleph docker-compose.example.yml (production-style).
+#
+# Includes infrastructure (postgres/elasticsearch/redis), queue workers
+# (ingest-file/ftm-analyze/ftm-translate/openaleph), the Aleph API, and the
+# Aleph UI — so project_y can talk to a live Aleph instance and so a human
+# can open the Aleph UI in the browser.
+#
+# Each project_y workspace runs its OWN Aleph stack at port offsets so multiple
+# Conductor workspaces can run in parallel without collision. Per-workspace
+# ports + COMPOSE_PROJECT_NAME live in .env.ports (written by bin/dev-init).
+#
+# Inside the Docker network, services talk via internal hostnames + default
+# ports. Only the host-mapped ports change per workspace.
+#
+# The first start runs `aleph upgrade` (migrations + secret-key setup) via the
+# `aleph-init` one-shot service; api/worker/ui depend on its successful exit.
+#
+# Apple Silicon: OpenAleph publishes amd64-only manifests, so all
+# OpenAleph-built images are pinned to linux/amd64 and run via Rosetta.
+# Enable Rosetta in Docker Desktop → Settings → General for usable speed.
+#
+# Usage:
+#   bin/dev-init    # writes .env.ports + aleph.env.docker
+#   bin/dev-up      # docker compose -f docker-compose.aleph.yml up -d
+#   bin/dev-status
+#   bin/dev-down [--purge]
+
+x-aleph-image: &aleph-image
+  image: ghcr.io/openaleph/openaleph:${ALEPH_TAG:-latest}
+  platform: linux/amd64
+
+services:
+  postgres:
+    image: postgres:17
+    ports:
+      - "127.0.0.1:${ALEPH_POSTGRES_PORT:-8010}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: aleph
+      POSTGRES_PASSWORD: aleph
+      POSTGRES_DATABASE: aleph
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "aleph"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  elasticsearch:
+    # Multi-arch image (official Elastic + analysis-icu plugin).
+    # Built locally on first dev-up; cached thereafter.
+    # Why not OpenAleph's image: their custom ES is amd64-only; under Rosetta
+    # on Apple Silicon, ES 9.x crashes with "seccomp unavailable" because the
+    # native syscall sandbox install fails through the translation layer.
+    # The official Elastic image has a native arm64 build, so no Rosetta.
+    build:
+      context: ./docker/elasticsearch
+      dockerfile: Dockerfile
+    image: project_y/elasticsearch:9-icu
+    restart: on-failure
+    ports:
+      - "127.0.0.1:${ALEPH_ES_PORT:-8011}:9200"
+    volumes:
+      - elasticsearch-data:/usr/share/elasticsearch/data
+    environment:
+      # 512m heap is enough for dev (millions of docs is fine); production OLAF
+      # tunes this up.
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - "discovery.type=single-node"
+      - "xpack.security.enabled=false"
+      - "xpack.security.transport.ssl.enabled=false"
+      - "xpack.security.http.ssl.enabled=false"
+      - "http.cors.enabled=true"
+      - "http.cors.allow-origin=/.*/"
+      - "http.cors.allow-headers=/.*/"
+      - "http.cors.allow-credentials=true"
+      - "network.host=0.0.0.0"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:9200/_cluster/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 90s
+
+  redis:
+    image: redis:alpine
+    command: ["redis-server", "--save", "3600", "10"]
+    ports:
+      - "127.0.0.1:${ALEPH_REDIS_PORT:-8012}:6379"
+    volumes:
+      - redis-data:/data
+    restart: unless-stopped
+
+  # One-shot: runs `aleph upgrade` (DB migrations + index setup) and exits.
+  # api/worker/ui depend on this completing successfully.
+  aleph-init:
+    <<: *aleph-image
+    command: ["aleph", "upgrade"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    env_file:
+      - aleph.env.docker
+    restart: "no"
+
+  worker:
+    <<: *aleph-image
+    command: procrastinate worker -q openaleph,openaleph-management --concurrency 2
+    restart: unless-stopped
+    depends_on:
+      aleph-init:
+        condition: service_completed_successfully
+    tmpfs:
+      - /tmp
+    volumes:
+      - archive-data:/data
+    env_file:
+      - aleph.env.docker
+
+  api:
+    <<: *aleph-image
+    ports:
+      - "127.0.0.1:${ALEPH_API_PORT:-8013}:8000"
+    depends_on:
+      aleph-init:
+        condition: service_completed_successfully
+      worker:
+        condition: service_started
+    tmpfs:
+      - /tmp
+    volumes:
+      - archive-data:/data
+    restart: unless-stopped
+    env_file:
+      - aleph.env.docker
+
+  ui:
+    image: ghcr.io/openaleph/aleph-ui:${ALEPH_TAG:-latest}
+    platform: linux/amd64
+    depends_on:
+      api:
+        condition: service_started
+    ports:
+      - "127.0.0.1:${ALEPH_UI_PORT:-8014}:8080"
+    restart: unless-stopped
+
+  ingest-file:
+    image: ghcr.io/openaleph/ingest-file:main
+    platform: linux/amd64
+    command: procrastinate worker -q ingest --concurrency 2
+    hostname: ingest
+    tmpfs: /tmp
+    volumes:
+      - ./data:/data
+      - archive-data:/archive
+    depends_on:
+      aleph-init:
+        condition: service_completed_successfully
+    restart: on-failure
+    env_file:
+      - aleph.env.docker
+
+  ftm-analyze:
+    image: ghcr.io/openaleph/ftm-analyze:main-spacy
+    platform: linux/amd64
+    entrypoint: procrastinate worker -q analyze --concurrency 2
+    restart: on-failure
+    depends_on:
+      aleph-init:
+        condition: service_completed_successfully
+    tmpfs:
+      - /tmp
+    env_file:
+      - aleph.env.docker
+
+  ftm-translate:
+    image: ghcr.io/openaleph/ftm-translate:main-argos
+    platform: linux/amd64
+    entrypoint: procrastinate worker -q translate --concurrency 2
+    restart: on-failure
+    depends_on:
+      aleph-init:
+        condition: service_completed_successfully
+    tmpfs:
+      - /tmp
+    env_file:
+      - aleph.env.docker
+
+volumes:
+  elasticsearch-data:
+  postgres-data:
+  redis-data:
+  archive-data:
