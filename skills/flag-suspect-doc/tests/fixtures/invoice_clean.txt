@@ -1,0 +1,22 @@
+INVOICE No. 2024-0317-A
+Date: 2024-03-17
+
+From:
+  Rheinpapier Druckerei GmbH
+  Industriestrasse 47, 50226 Frechen, Germany
+  USt-IdNr.: DE123456789
+
+To:
+  Northwind Industrial GmbH
+  Berliner Allee 12, 40212 Dusseldorf, Germany
+
+Itemised services:
+  - 5,000 brochures, 12pp, 4-colour, gloss     EUR  3,847.50
+  - Delivery to Dusseldorf warehouse            EUR    142.00
+  - Setup and proofing                          EUR    310.00
+
+Subtotal:                                       EUR  4,299.50
+VAT 19%:                                        EUR    816.91
+Total due:                                      EUR  5,116.41
+
+Payment terms: net 30 days.

@@ -1,0 +1,23 @@
+INVOICE No. INV-2023-118
+Date: 2023-12-29
+
+From:
+  Helios Strategic Advisors Ltd.
+  P.O. Box 1184, Road Town, Tortola
+  British Virgin Islands
+
+To:
+  Northwind Industrial GmbH
+  Berliner Allee 12, 40212 Dusseldorf, Germany
+
+Description of services rendered:
+  - Strategic consulting services            EUR 250,000.00
+
+Total due:                                   EUR 250,000.00
+
+Payment instructions:
+  Beneficiary:  Helios Strategic Advisors Ltd.
+  Bank:         Pacific International Bank, Suva, Fiji
+  Reference:    HSA-NIN-Q4
+
+No tax identifier provided.

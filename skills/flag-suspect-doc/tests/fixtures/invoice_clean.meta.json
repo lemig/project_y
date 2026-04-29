@@ -1,0 +1,13 @@
+{
+  "doc_id": "fixture-doc-002",
+  "title": "Invoice 2024-0317-A — Rheinpapier Druckerei GmbH",
+  "extractor_version": "fixture-text@v1",
+  "source_lang": "en",
+  "page_count": 1,
+  "issuer_country": "DE",
+  "recipient_country": "DE",
+  "currency": "EUR",
+  "amount": 5116.41,
+  "issue_date": "2024-03-17",
+  "expected_signals": []
+}
