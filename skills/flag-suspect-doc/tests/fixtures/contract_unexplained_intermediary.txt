@@ -1,0 +1,31 @@
+SERVICES AGREEMENT
+
+This Services Agreement ("Agreement") is entered into on 1 February 2023
+between:
+
+  (1) Northwind Industrial GmbH, a company incorporated in Germany
+      ("Principal"); and
+
+  (2) Sterling Liaison Partners SA, a company incorporated in Panama
+      ("Agent").
+
+WHEREAS the Principal wishes to retain the Agent in connection with
+certain commercial opportunities in the West African region;
+
+NOW THEREFORE the parties agree as follows:
+
+1. Engagement. The Agent shall provide such services as the Principal
+   may from time to time request.
+
+2. Compensation. The Principal shall pay the Agent a commission equal
+   to eighteen per cent (18%) of the gross value of any contract
+   awarded to the Principal in the territory during the term.
+
+3. Term. This Agreement shall commence on the date hereof and continue
+   until terminated by either party upon 30 days' written notice.
+
+4. Confidentiality. The existence and terms of this Agreement shall be
+   treated as strictly confidential.
+
+Signed for the Principal: ________________
+Signed for the Agent:     ________________

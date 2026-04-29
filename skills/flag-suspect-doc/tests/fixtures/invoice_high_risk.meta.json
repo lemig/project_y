@@ -1,0 +1,19 @@
+{
+  "doc_id": "fixture-doc-001",
+  "title": "Invoice INV-2023-118 — Helios Strategic Advisors Ltd.",
+  "extractor_version": "fixture-text@v1",
+  "source_lang": "en",
+  "page_count": 1,
+  "issuer_country": "VG",
+  "recipient_country": "DE",
+  "currency": "EUR",
+  "amount": 250000.0,
+  "issue_date": "2023-12-29",
+  "expected_signals": [
+    "high-risk-jurisdiction-counterparty",
+    "round-number-amount",
+    "vague-service-description",
+    "no-tax-identifier",
+    "end-of-period-timing"
+  ]
+}

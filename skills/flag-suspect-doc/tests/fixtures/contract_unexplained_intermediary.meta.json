@@ -1,0 +1,17 @@
+{
+  "doc_id": "fixture-doc-003",
+  "title": "Services Agreement — Northwind / Sterling Liaison Partners",
+  "extractor_version": "fixture-text@v1",
+  "source_lang": "en",
+  "page_count": 1,
+  "issuer_country": "DE",
+  "counterparty_country": "PA",
+  "currency": "EUR",
+  "amount": null,
+  "issue_date": "2023-02-01",
+  "expected_signals": [
+    "high-risk-jurisdiction-counterparty",
+    "intermediary-no-apparent-role",
+    "vague-service-description"
+  ]
+}

@@ -21,4 +21,4 @@ packages = ["src/agent", "src/schema", "src/skills"]
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]
-testpaths = ["tests"]
+testpaths = ["tests", "skills"]
