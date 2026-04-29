@@ -1,0 +1,139 @@
+{
+  "$schema": "v2-adversarial-ocr-drift-2026-04-29",
+  "doc": "OCR drift pairs: same doc + same page + two different extractor_version values producing different normalized_text_sha256. Consumed by the corpus-snapshot tests (workspace D) \u2014 the per-investigation snapshot must capture extractor_version per document so that re-running the investigation later with a different OCR pipeline doesn't silently change quote provenance. Every pair has at least two extractions with distinct normalized_text_sha256 values; this is asserted at fixture-build time.",
+  "pairs": [
+    {
+      "id": "ligature_fi_v4_vs_v5",
+      "doc_id": "doc-ocr-001",
+      "page": 1,
+      "what_changed": "Tesseract 4.1.1 emits the U+FB01 ligature '\ufb01' as a single code point; Tesseract 5.3.1 emits it as the two-character sequence 'fi'. Same scan, same page \u2014 but every word containing 'fi' (e.g. 'finanziario', 'fiscale', 'definitivo') produces different bytes.",
+      "extractions": [
+        {
+          "extractor_version": "tesseract-4.1.1@aleph-3.16",
+          "normalized_text": "Il rapporto \ufb01nanziario \ufb01scale \u00e8 de\ufb01nitivo.",
+          "human_readable": "Il rapporto \ufb01nanziario \ufb01scale \u00e8 de\ufb01nitivo. (with U+FB01 ligatures)",
+          "normalized_text_utf8_byte_length": 49,
+          "normalized_text_sha256": "f2c367ab51820cb08bbae16906afd27998a942c72f8049ec369096eed40237a5"
+        },
+        {
+          "extractor_version": "tesseract-5.3.1@aleph-3.18",
+          "normalized_text": "Il rapporto finanziario fiscale \u00e8 definitivo.",
+          "human_readable": "Il rapporto finanziario fiscale \u00e8 definitivo. (no ligatures)",
+          "normalized_text_utf8_byte_length": 46,
+          "normalized_text_sha256": "81ada822e3f5fa1af87b039f1099273cda44f7aba4a96d952a0895955eff1f3c"
+        }
+      ]
+    },
+    {
+      "id": "soft_hyphen_drift",
+      "doc_id": "doc-ocr-002",
+      "page": 4,
+      "what_changed": "Tesseract 4.x leaves the U+00AD SOFT HYPHEN bytes from the original PDF in place; Tesseract 5.x silently drops them. Words split across line breaks differ in raw bytes.",
+      "extractions": [
+        {
+          "extractor_version": "tesseract-4.1.1@aleph-3.16",
+          "normalized_text": "amministra\u00adzione comunale",
+          "human_readable": "amministra\u00adzione comunale (soft hyphen kept)",
+          "normalized_text_utf8_byte_length": 26,
+          "normalized_text_sha256": "e1d96455c25f21b3ef2ee7d83fb2bff3cf8257645840d81a370aa0f211e5e773"
+        },
+        {
+          "extractor_version": "tesseract-5.3.1@aleph-3.18",
+          "normalized_text": "amministrazione comunale",
+          "human_readable": "amministrazione comunale (soft hyphen stripped)",
+          "normalized_text_utf8_byte_length": 24,
+          "normalized_text_sha256": "89c8e9c7911f4f0ee683572dd00f5466221fb9b71e6c4992a53a8fb3ae8f9d9b"
+        }
+      ]
+    },
+    {
+      "id": "diacritic_loss_old_extractor",
+      "doc_id": "doc-ocr-003",
+      "page": 2,
+      "what_changed": "An older textract path ('textract-1.4@aleph-3.10') strips non-ASCII diacritics from low-quality scans. The newer 'tesseract-5.3.1@aleph-3.18' preserves them. Same Romanian company name yields different hashes.",
+      "extractions": [
+        {
+          "extractor_version": "textract-1.4@aleph-3.10",
+          "normalized_text": "S.C. ALFA Constructii S.R.L.",
+          "human_readable": "S.C. ALFA Constructii S.R.L. (diacritics stripped from 'Construc\u021bii')",
+          "normalized_text_utf8_byte_length": 28,
+          "normalized_text_sha256": "8832a633eeb54d1865f69b42026b25dbe6c53dbacc6309893a926cb9f29b8d7e"
+        },
+        {
+          "extractor_version": "tesseract-5.3.1@aleph-3.18",
+          "normalized_text": "S.C. ALFA Construc\u021bii S.R.L.",
+          "human_readable": "S.C. ALFA Construc\u021bii S.R.L. (Romanian \u021b preserved)",
+          "normalized_text_utf8_byte_length": 29,
+          "normalized_text_sha256": "b29a087e5aa5ece99346d61830d015f9ab49e36d920e940f7284fd2aeb82f964"
+        }
+      ]
+    },
+    {
+      "id": "zero_o_confusion_old_extractor",
+      "doc_id": "doc-ocr-004",
+      "page": 1,
+      "what_changed": "An older OCR path misread the digit '0' as capital 'O' in the VAT-ID line. Newer extractor reads it correctly. Same underlying scan; the normalized_text_sha256 differs because the actual character is different.",
+      "extractions": [
+        {
+          "extractor_version": "tesseract-3.05.02@aleph-3.06",
+          "normalized_text": "Tax ID: RO123456O8",
+          "human_readable": "Tax ID: RO123456O8 (penultimate digit OCR'd as letter O)",
+          "normalized_text_utf8_byte_length": 18,
+          "normalized_text_sha256": "cf3b89cb4e82e4452dcd63adbb4ef5438fcc1a284b65a85db12b2b8247b9dc56"
+        },
+        {
+          "extractor_version": "tesseract-5.3.1@aleph-3.18",
+          "normalized_text": "Tax ID: RO12345608",
+          "human_readable": "Tax ID: RO12345608 (correct digit 0)",
+          "normalized_text_utf8_byte_length": 18,
+          "normalized_text_sha256": "7dbb4e661a0e0599dd9c152469e5afcacd00b92836313765085c554abcaab7e0"
+        }
+      ]
+    },
+    {
+      "id": "trailing_space_normalization",
+      "doc_id": "doc-ocr-005",
+      "page": 7,
+      "what_changed": "ingest-file v3.16 emits a trailing space at end-of-line; v3.18 collapses end-of-line whitespace. Page-level text differs only in trailing whitespace, but the sha256 differs.",
+      "extractions": [
+        {
+          "extractor_version": "tesseract-5.3.1@aleph-3.16",
+          "normalized_text": "The contract amount was 120,000 EUR. \nSigned in Brussels.",
+          "human_readable": "...120,000 EUR.<SPACE><LF>... (trailing space before newline)",
+          "normalized_text_utf8_byte_length": 57,
+          "normalized_text_sha256": "4e5270d515acf098c23b75b1a7584ac0ed97cf216e3cc5801b4872bbfaeab07a"
+        },
+        {
+          "extractor_version": "tesseract-5.3.1@aleph-3.18",
+          "normalized_text": "The contract amount was 120,000 EUR.\nSigned in Brussels.",
+          "human_readable": "...120,000 EUR.<LF>... (no trailing space)",
+          "normalized_text_utf8_byte_length": 56,
+          "normalized_text_sha256": "f3f024ec9fd184cda603891254c9ad0c66c50028a655d42a9093d0f58ace0ce6"
+        }
+      ]
+    },
+    {
+      "id": "page_rotation_reordering",
+      "doc_id": "doc-ocr-006",
+      "page": 12,
+      "what_changed": "A two-column scanned page: aleph-3.16 reads top-to-bottom down each column (left then right); aleph-3.18 reads left-to-right across both columns line-by-line. Same words, same characters, completely different reading order.",
+      "extractions": [
+        {
+          "extractor_version": "tesseract-5.3.1@aleph-3.16",
+          "normalized_text": "Beneficiary: ALFA SRL\nIBAN: RO99 1234\nAmount: 50,000 EUR\nDate: 2024-03-12",
+          "human_readable": "column-wise reading: beneficiary block then IBAN block then amount block then date",
+          "normalized_text_utf8_byte_length": 73,
+          "normalized_text_sha256": "f8a448f53870f3e15072f31c0691f53c734a6298df9e6ddf560180f1f489475f"
+        },
+        {
+          "extractor_version": "tesseract-5.3.1@aleph-3.18",
+          "normalized_text": "Beneficiary: ALFA SRL  Amount: 50,000 EUR\nIBAN: RO99 1234  Date: 2024-03-12",
+          "human_replace": null,
+          "human_readable": "row-wise reading: beneficiary + amount on same line, IBAN + date on next",
+          "normalized_text_utf8_byte_length": 75,
+          "normalized_text_sha256": "726da34fe490a1b5c89c9de94c65a77b65ac64257c2fca1edec0cb6b06e9863b"
+        }
+      ]
+    }
+  ]
+}

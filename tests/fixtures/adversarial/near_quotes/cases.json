@@ -1,0 +1,286 @@
+{
+  "$schema": "v2-adversarial-near-quotes-2026-04-29",
+  "doc": "20 'almost matches but isn't' cases consumed by the substring quote verifier (workspace C). For every case, doc_text_at_claimed_offsets != claimed_quote, so the verifier MUST return a mismatch. Categories: off_by_one_char, whitespace, smart_quotes, ocr_confusion, offset_drift, case.",
+  "cases": [
+    {
+      "id": "off_by_one_missing_char",
+      "category": "off_by_one_char",
+      "doc_text": "Banca Intesa transferred 120,000 EUR to account 5512 on 2024-03-12.",
+      "claimed_offsets": {
+        "start": 0,
+        "end": 38
+      },
+      "claimed_quote": "Banca Intsa transferred 120,000 EUR",
+      "doc_text_at_claimed_offsets": "Banca Intesa transferred 120,000 EUR t",
+      "expected_verdict": "mismatch",
+      "what_attacker_did": "dropped the 'e' from 'Intesa' to fabricate a near-miss quote",
+      "notes": "Offsets point to the correct region; quote text differs by one deleted character."
+    },
+    {
+      "id": "off_by_one_extra_char",
+      "category": "off_by_one_char",
+      "doc_text": "Banca Intesa transferred 120,000 EUR to account 5512 on 2024-03-12.",
+      "claimed_offsets": {
+        "start": 0,
+        "end": 37
+      },
+      "claimed_quote": "Bancca Intesa transferred 120,000 EUR",
+      "doc_text_at_claimed_offsets": "Banca Intesa transferred 120,000 EUR ",
+      "expected_verdict": "mismatch",
+      "what_attacker_did": "duplicated the 'c' in 'Banca'",
+      "notes": "One inserted character; offsets unchanged."
+    },
+    {
+      "id": "off_by_one_substituted_char",
+      "category": "off_by_one_char",
+      "doc_text": "Banca Intesa transferred 120,000 EUR to account 5512 on 2024-03-12.",
+      "claimed_offsets": {
+        "start": 25,
+        "end": 32
+      },
+      "claimed_quote": "121,000",
+      "doc_text_at_claimed_offsets": "120,000",
+      "expected_verdict": "mismatch",
+      "what_attacker_did": "changed the leading digit of the amount from '120,000' to '121,000'",
+      "notes": "High-stakes single-character substitution: amount inflation by 1k."
+    },
+    {
+      "id": "off_by_one_transposed_pair",
+      "category": "off_by_one_char",
+      "doc_text": "Banca Intesa transferred 120,000 EUR to account 5512 on 2024-03-12.",
+      "claimed_offsets": {
+        "start": 6,
+        "end": 12
+      },
+      "claimed_quote": "Intsea",
+      "doc_text_at_claimed_offsets": "Intesa",
+      "expected_verdict": "mismatch",
+      "what_attacker_did": "swapped 'es' to 'se' in 'Intesa'",
+      "notes": "Levenshtein-1 transposition; common LLM hallucination from training data."
+    },
+    {
+      "id": "whitespace_double_space",
+      "category": "whitespace",
+      "doc_text": "Banca Intesa transferred 120,000 EUR to account 5512 on 2024-03-12.",
+      "claimed_offsets": {
+        "start": 0,
+        "end": 12
+      },
+      "claimed_quote": "Banca  Intesa",
+      "doc_text_at_claimed_offsets": "Banca Intesa",
+      "expected_verdict": "mismatch",
+      "what_attacker_did": "doubled the space between 'Banca' and 'Intesa'",
+      "notes": "Whitespace insertion only."
+    },
+    {
+      "id": "whitespace_nbsp",
+      "category": "whitespace",
+      "doc_text": "Banca Intesa transferred 120,000 EUR to account 5512 on 2024-03-12.",
+      "claimed_offsets": {
+        "start": 0,
+        "end": 12
+      },
+      "claimed_quote": "Banca\u00a0Intesa",
+      "doc_text_at_claimed_offsets": "Banca Intesa",
+      "expected_verdict": "mismatch",
+      "what_attacker_did": "replaced the regular space with U+00A0 NO-BREAK SPACE",
+      "notes": "Visually identical; copy-paste from Word/Excel often introduces NBSP."
+    },
+    {
+      "id": "whitespace_tab_for_space",
+      "category": "whitespace",
+      "doc_text": "Banca Intesa transferred 120,000 EUR to account 5512 on 2024-03-12.",
+      "claimed_offsets": {
+        "start": 0,
+        "end": 12
+      },
+      "claimed_quote": "Banca\tIntesa",
+      "doc_text_at_claimed_offsets": "Banca Intesa",
+      "expected_verdict": "mismatch",
+      "what_attacker_did": "replaced the regular space with a TAB (U+0009)",
+      "notes": "Tabs are common in CSV-derived docs."
+    },
+    {
+      "id": "whitespace_newline_for_space",
+      "category": "whitespace",
+      "doc_text": "Banca Intesa transferred 120,000 EUR to account 5512 on 2024-03-12.",
+      "claimed_offsets": {
+        "start": 0,
+        "end": 12
+      },
+      "claimed_quote": "Banca\nIntesa",
+      "doc_text_at_claimed_offsets": "Banca Intesa",
+      "expected_verdict": "mismatch",
+      "what_attacker_did": "replaced the regular space with U+000A LINE FEED",
+      "notes": "Line breaks injected from PDF column-break artifacts."
+    },
+    {
+      "id": "whitespace_trailing_space",
+      "category": "whitespace",
+      "doc_text": "Banca Intesa transferred 120,000 EUR to account 5512 on 2024-03-12.",
+      "claimed_offsets": {
+        "start": 0,
+        "end": 12
+      },
+      "claimed_quote": "Banca Intesa ",
+      "doc_text_at_claimed_offsets": "Banca Intesa",
+      "expected_verdict": "mismatch",
+      "what_attacker_did": "appended a trailing space to the claimed quote that isn't in the doc at this offset range",
+      "notes": "Trailing-whitespace forgery; verifier must NOT silently strip."
+    },
+    {
+      "id": "smart_quotes_double",
+      "category": "smart_quotes",
+      "doc_text": "The minister stated: \"I refuse the proposal\" on the record.",
+      "claimed_offsets": {
+        "start": 21,
+        "end": 41
+      },
+      "claimed_quote": "\u201cI refuse the proposal\u201d",
+      "doc_text_at_claimed_offsets": "\"I refuse the propos",
+      "expected_verdict": "mismatch",
+      "what_attacker_did": "replaced ASCII double quotes with U+201C/U+201D curly quotes",
+      "notes": "LLMs trained on prose love to 'beautify' quotes; verifier must reject."
+    },
+    {
+      "id": "smart_quotes_single",
+      "category": "smart_quotes",
+      "doc_text": "The board's decision was challenged.",
+      "claimed_offsets": {
+        "start": 4,
+        "end": 11
+      },
+      "claimed_quote": "board\u2019s",
+      "doc_text_at_claimed_offsets": "board's",
+      "expected_verdict": "mismatch",
+      "what_attacker_did": "replaced ASCII apostrophe (U+0027) with U+2019 RIGHT SINGLE QUOTATION MARK",
+      "notes": "Most common typographic substitution in LLM output."
+    },
+    {
+      "id": "em_dash_for_hyphen",
+      "category": "smart_quotes",
+      "doc_text": "The fine - 50,000 EUR - was upheld.",
+      "claimed_offsets": {
+        "start": 9,
+        "end": 26
+      },
+      "claimed_quote": "\u2014 50,000 EUR \u2014",
+      "doc_text_at_claimed_offsets": "- 50,000 EUR - wa",
+      "expected_verdict": "mismatch",
+      "what_attacker_did": "replaced the ASCII hyphen-minus with U+2014 EM DASH on both sides",
+      "notes": "Em dash injection is a frequent LLM 'improvement'."
+    },
+    {
+      "id": "ocr_zero_for_capital_o",
+      "category": "ocr_confusion",
+      "doc_text": "Director: M. Iliescu. Tax ID: RO12345678. Reference: II-09/2024.",
+      "claimed_offsets": {
+        "start": 24,
+        "end": 34
+      },
+      "claimed_quote": "R012345678",
+      "doc_text_at_claimed_offsets": "x ID: RO12",
+      "expected_verdict": "mismatch",
+      "what_attacker_did": "OCR-confused the capital 'O' in 'RO' with digit '0'",
+      "notes": "Romanian VAT ID prefix RO; flipping the O to 0 is an OCR-class bug."
+    },
+    {
+      "id": "ocr_one_for_lowercase_l",
+      "category": "ocr_confusion",
+      "doc_text": "Account holder: Luca Bianchi.",
+      "claimed_offsets": {
+        "start": 16,
+        "end": 28
+      },
+      "claimed_quote": "1uca Bianchi",
+      "doc_text_at_claimed_offsets": "Luca Bianchi",
+      "expected_verdict": "mismatch",
+      "what_attacker_did": "OCR-confused the capital 'L' (or lowercase l) with digit '1'",
+      "notes": "Sans-serif fonts make L/l/1 visually identical."
+    },
+    {
+      "id": "ocr_rn_for_m",
+      "category": "ocr_confusion",
+      "doc_text": "Payment from Marco Rossi was received.",
+      "claimed_offsets": {
+        "start": 13,
+        "end": 18
+      },
+      "claimed_quote": "Rnarco",
+      "doc_text_at_claimed_offsets": "Marco",
+      "expected_verdict": "mismatch",
+      "what_attacker_did": "OCR-split 'Ma' into 'rn' giving 'Rnarco' instead of 'Marco'",
+      "notes": "Classic OCR drift: 'rn' and 'm' are indistinguishable at low DPI."
+    },
+    {
+      "id": "ocr_cl_for_d",
+      "category": "ocr_confusion",
+      "doc_text": "The deposit was confirmed on 03/04/2025.",
+      "claimed_offsets": {
+        "start": 4,
+        "end": 11
+      },
+      "claimed_quote": "cleposit",
+      "doc_text_at_claimed_offsets": "deposit",
+      "expected_verdict": "mismatch",
+      "what_attacker_did": "OCR-split 'd' into 'cl'",
+      "notes": "Letter merger artifact, common in low-DPI scans."
+    },
+    {
+      "id": "ocr_double_i_for_h",
+      "category": "ocr_confusion",
+      "doc_text": "Reference: H-09/2024 in the registry.",
+      "claimed_offsets": {
+        "start": 11,
+        "end": 19
+      },
+      "claimed_quote": "II-09/202",
+      "doc_text_at_claimed_offsets": "H-09/202",
+      "expected_verdict": "mismatch",
+      "what_attacker_did": "OCR-split 'H' into 'II'",
+      "notes": "Roman-numeral / capital-letter confusion in stylised serif fonts."
+    },
+    {
+      "id": "ocr_vv_for_w",
+      "category": "ocr_confusion",
+      "doc_text": "Issued by SwissBank in Geneva.",
+      "claimed_offsets": {
+        "start": 10,
+        "end": 19
+      },
+      "claimed_quote": "SvvissBank",
+      "doc_text_at_claimed_offsets": "SwissBank",
+      "expected_verdict": "mismatch",
+      "what_attacker_did": "OCR-split 'w' into 'vv'",
+      "notes": "Especially common in old typewritten German-language docs where W is rendered as VV."
+    },
+    {
+      "id": "wrong_region_correct_text",
+      "category": "offset_drift",
+      "doc_text": "Banca Intesa transferred 120,000 EUR to account 5512 on 2024-03-12.",
+      "claimed_offsets": {
+        "start": 39,
+        "end": 47
+      },
+      "claimed_quote": "120,000 EUR",
+      "doc_text_at_claimed_offsets": " account",
+      "expected_verdict": "mismatch",
+      "what_attacker_did": "quoted a string that exists in the doc, but at offsets pointing to a different region",
+      "notes": "Self-consistent quote text but offsets are wrong \u2014 verifier must compare doc[s:e] with quote_text, not just substring-search the doc."
+    },
+    {
+      "id": "case_fold_difference",
+      "category": "case",
+      "doc_text": "Banca Intesa transferred 120,000 EUR to account 5512 on 2024-03-12.",
+      "claimed_offsets": {
+        "start": 0,
+        "end": 12
+      },
+      "claimed_quote": "BANCA INTESA",
+      "doc_text_at_claimed_offsets": "Banca Intesa",
+      "expected_verdict": "mismatch",
+      "what_attacker_did": "upper-cased a span the doc has in mixed case",
+      "notes": "LLM output 'normalized' the entity name; verifier must NOT silently case-fold."
+    }
+  ]
+}

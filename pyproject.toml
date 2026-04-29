@@ -20,7 +20,7 @@ dev = [
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/agent", "src/aleph", "src/schema", "src/skills"]
+packages = ["src/agent", "src/aleph", "src/audit", "src/schema", "src/skills", "src/verifier"]
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]
