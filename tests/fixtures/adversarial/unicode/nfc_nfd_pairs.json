@@ -1,0 +1,220 @@
+{
+  "$schema": "v2-adversarial-unicode-pairs-2026-04-29",
+  "doc": "Each entry is the same human-readable text in NFC (composed) and NFD (decomposed) form. Canonical equivalence: unicodedata.normalize('NFC', nfc) == unicodedata.normalize('NFC', nfd). Raw byte sequences differ: nfc_utf8_byte_length != nfd_utf8_byte_length and nfc_utf8_sha256 != nfd_utf8_sha256 for every entry. Brief-hash, audit-log dedup, and substring-quote-verifier inputs MUST normalize to NFC before hashing or substring search.",
+  "pairs": [
+    {
+      "id": "ro_t_comma_a_breve",
+      "language_name": "Romanian",
+      "iso_lang": "ro",
+      "context": "country name '\u021bar\u0103' \u2014 common in Romanian-language case files",
+      "nfc": "\u021bar\u0103",
+      "nfd": "t\u0326ara\u0306",
+      "nfc_codepoints": [
+        "U+021B",
+        "U+0061",
+        "U+0072",
+        "U+0103"
+      ],
+      "nfd_codepoints": [
+        "U+0074",
+        "U+0326",
+        "U+0061",
+        "U+0072",
+        "U+0061",
+        "U+0306"
+      ],
+      "decomposed_marks": [
+        "U+0326 COMBINING COMMA BELOW",
+        "U+0306 COMBINING BREVE"
+      ],
+      "notes": "Two combining marks in one short word: 't' with comma below + 'a' with breve. Romanian case docs frequently mix NFC and NFD because of inconsistent OCR + manual-transcription pipelines.",
+      "nfc_utf8_byte_length": 6,
+      "nfd_utf8_byte_length": 8,
+      "nfc_utf8_sha256": "6221e032144aac85a14b669bcb9d6cf8f1ea027b48f7194c640af62af42d87d9",
+      "nfd_utf8_sha256": "1182cc1b9eee530e1eec73d754c2acb9e77923d303a830ab43b1ec2b7b71fdd3"
+    },
+    {
+      "id": "it_e_grave",
+      "language_name": "Italian",
+      "iso_lang": "it",
+      "context": "phrase '\u00e8 ovvio' (it is obvious) \u2014 common in narrative testimony",
+      "nfc": "\u00e8 ovvio",
+      "nfd": "e\u0300 ovvio",
+      "nfc_codepoints": [
+        "U+00E8",
+        "U+0020",
+        "U+006F",
+        "U+0076",
+        "U+0076",
+        "U+0069",
+        "U+006F"
+      ],
+      "nfd_codepoints": [
+        "U+0065",
+        "U+0300",
+        "U+0020",
+        "U+006F",
+        "U+0076",
+        "U+0076",
+        "U+0069",
+        "U+006F"
+      ],
+      "decomposed_marks": [
+        "U+0300 COMBINING GRAVE ACCENT"
+      ],
+      "notes": "Italian \u00e8 is one of the most common decomposable graphemes in EU-procurement contracts. Guardia di Finanza exports often arrive in NFD because of macOS-side text capture.",
+      "nfc_utf8_byte_length": 8,
+      "nfd_utf8_byte_length": 9,
+      "nfc_utf8_sha256": "b50a3556690f3157f5b7ab06c75a1a47b7497c5e68e44fda340ffb9d98790181",
+      "nfd_utf8_sha256": "c79eef484e2a2c30d23608352d165f078bc61e40e615c4590b0120917c654829"
+    },
+    {
+      "id": "fr_societe_generale",
+      "language_name": "French",
+      "iso_lang": "fr",
+      "context": "bank name 'Soci\u00e9t\u00e9 G\u00e9n\u00e9rale' \u2014 recurs across French-language KYC files",
+      "nfc": "Soci\u00e9t\u00e9 G\u00e9n\u00e9rale",
+      "nfd": "Socie\u0301te\u0301 Ge\u0301ne\u0301rale",
+      "nfc_codepoints_summary": "16 code points (4 precomposed e-acute)",
+      "nfd_codepoints_summary": "20 code points (4 e + 4 combining acute)",
+      "decomposed_marks": [
+        "U+0301 COMBINING ACUTE ACCENT (x4)"
+      ],
+      "notes": "Four decomposable code points in one entity name. Mixed normalization here breaks naive entity-resolution joins on text equality.",
+      "nfc_utf8_byte_length": 20,
+      "nfd_utf8_byte_length": 24,
+      "nfc_utf8_sha256": "04131ff86835d51f02aab0bfd474bd9e9fcc2eb47b2b726df24ee74287f15b74",
+      "nfd_utf8_sha256": "91e42ee8722988e062f213e0334d9fbc4baeead0b1c05938ed3420b6aba1e97d"
+    },
+    {
+      "id": "bg_toyota",
+      "language_name": "Bulgarian",
+      "iso_lang": "bg",
+      "context": "'\u0422\u043e\u0439\u043e\u0442\u0430' (Toyota in Cyrillic) \u2014 appears in Bulgarian customs declarations",
+      "nfc": "\u0422\u043e\u0439\u043e\u0442\u0430",
+      "nfd": "\u0422\u043e\u0438\u0306\u043e\u0442\u0430",
+      "nfc_codepoints": [
+        "U+0422",
+        "U+043E",
+        "U+0439",
+        "U+043E",
+        "U+0442",
+        "U+0430"
+      ],
+      "nfd_codepoints": [
+        "U+0422",
+        "U+043E",
+        "U+0438",
+        "U+0306",
+        "U+043E",
+        "U+0442",
+        "U+0430"
+      ],
+      "decomposed_marks": [
+        "U+0306 COMBINING BREVE"
+      ],
+      "notes": "Bulgarian \u0439 is the most commonly-encountered decomposable Cyrillic letter. Trips up code that assumes 'all Cyrillic text is NFC by default'.",
+      "nfc_utf8_byte_length": 12,
+      "nfd_utf8_byte_length": 14,
+      "nfc_utf8_sha256": "759632442c8838e57de1aadd5701b391722c759d293be4d78e1caebbd2d1b45c",
+      "nfd_utf8_sha256": "7666ef1d89242cf7d978505e81ffc96fc9f8f418de6bdd11fdabfc0269fa66b7"
+    },
+    {
+      "id": "el_proti",
+      "language_name": "Greek",
+      "iso_lang": "el",
+      "context": "'\u03c0\u03c1\u03ce\u03c4\u03b7' (first, feminine) \u2014 appears in Greek company-registration extracts",
+      "nfc": "\u03c0\u03c1\u03ce\u03c4\u03b7",
+      "nfd": "\u03c0\u03c1\u03c9\u0301\u03c4\u03b7",
+      "nfc_codepoints": [
+        "U+03C0",
+        "U+03C1",
+        "U+03CE",
+        "U+03C4",
+        "U+03B7"
+      ],
+      "nfd_codepoints": [
+        "U+03C0",
+        "U+03C1",
+        "U+03C9",
+        "U+0301",
+        "U+03C4",
+        "U+03B7"
+      ],
+      "decomposed_marks": [
+        "U+0301 COMBINING ACUTE ACCENT (tonos in Greek)"
+      ],
+      "notes": "Greek tonos maps to U+0301 in NFD even though Greek typography lists 'GREEK SMALL LETTER OMEGA WITH TONOS' as its own thing. Some legacy Aleph extractors silently flip between U+0301 and U+0344 (combining greek dialytika tonos); that variant would be a separate fixture.",
+      "nfc_utf8_byte_length": 10,
+      "nfd_utf8_byte_length": 12,
+      "nfc_utf8_sha256": "5c46fb5ce3c0a458acbd960b64cc5adf866d88e36436284b9e46f4ab8062715c",
+      "nfd_utf8_sha256": "cd8787fdc2c94344f68652ba4ae5425d92dbc096c048c7165283bd18c0e7511b"
+    },
+    {
+      "id": "de_mueller",
+      "language_name": "German",
+      "iso_lang": "de",
+      "context": "surname 'M\u00fcller' \u2014 the most common German surname in OLAF case files",
+      "nfc": "M\u00fcller",
+      "nfd": "Mu\u0308ller",
+      "nfc_codepoints": [
+        "U+004D",
+        "U+00FC",
+        "U+006C",
+        "U+006C",
+        "U+0065",
+        "U+0072"
+      ],
+      "nfd_codepoints": [
+        "U+004D",
+        "U+0075",
+        "U+0308",
+        "U+006C",
+        "U+006C",
+        "U+0065",
+        "U+0072"
+      ],
+      "decomposed_marks": [
+        "U+0308 COMBINING DIAERESIS"
+      ],
+      "notes": "German umlauts. Some pipelines expand '\u00fc' to 'ue' (transliteration, NOT NFD); a 'Mueller' variant would be a separate transliteration-collision case.",
+      "nfc_utf8_byte_length": 7,
+      "nfd_utf8_byte_length": 8,
+      "nfc_utf8_sha256": "a78429899bb825ce667d25d92e2cde488f8a7d6871bb2be7365601cad6b0a8f2",
+      "nfd_utf8_sha256": "fa6a2313ed2910a7ea010814b90a5e6d4815d667f30132010deb6c0ddf524a07"
+    },
+    {
+      "id": "es_espana",
+      "language_name": "Spanish",
+      "iso_lang": "es",
+      "context": "country name 'Espa\u00f1a' \u2014 appears in tax-treaty docs and Spanish AEAT exports",
+      "nfc": "Espa\u00f1a",
+      "nfd": "Espan\u0303a",
+      "nfc_codepoints": [
+        "U+0045",
+        "U+0073",
+        "U+0070",
+        "U+0061",
+        "U+00F1",
+        "U+0061"
+      ],
+      "nfd_codepoints": [
+        "U+0045",
+        "U+0073",
+        "U+0070",
+        "U+0061",
+        "U+006E",
+        "U+0303",
+        "U+0061"
+      ],
+      "decomposed_marks": [
+        "U+0303 COMBINING TILDE"
+      ],
+      "notes": "Spanish \u00f1. Bonus pair beyond the five required by the task spec.",
+      "nfc_utf8_byte_length": 7,
+      "nfd_utf8_byte_length": 8,
+      "nfc_utf8_sha256": "f85c9fe36948469b69f31fb5026694619ce4dc122757ece67c8584ff8f2ac008",
+      "nfd_utf8_sha256": "c1b041371d46ddb500d1bab82a2bc66374f99e4bc89f51a47f367a4e16c2d28f"
+    }
+  ]
+}
