@@ -113,3 +113,11 @@ the normalized text (`src/schema/note.py:63-66`); the manifest must agree.
 `snapshot_collection`) with implementation deferred — workspaces C and E–K can
 import these names today; the body lands once workspace B's Aleph REST client
 is merged.
+
+**Status: implemented.** `snapshot_collection` now drives the real Aleph REST
+client per the design above. Tests in `tests/test_snapshot.py` cover canonical
+JSONL format, deterministic ordering across input permutations, multi-page
+counting, no-bodyText skipping with audit-log entry, pagination, and
+re-snapshot idempotence; an integration test (`-m integration`) snapshots the
+first visible collection on the per-workspace dev stack twice and asserts the
+hash matches.

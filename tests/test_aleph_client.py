@@ -173,6 +173,35 @@ def test_search_validates_limit_and_offset() -> None:
         client.search("x", offset=-1)
 
 
+def test_search_rejects_reserved_filter_keys() -> None:
+    """``filters={"collection_id": ...}`` must error rather than smuggle a
+    second ``filter:collection_id`` past the dedicated kwarg — a snapshot/
+    enumeration call site that bypassed the guard could silently widen scope
+    across collections."""
+    client = AlephClient(
+        base_url=API_BASE, api_key=API_KEY, transport=httpx.MockTransport(lambda r: _json({}))
+    )
+    with pytest.raises(ValueError, match="reserved"):
+        client.search("x", filters={"collection_id": "evil"})
+    with pytest.raises(ValueError, match="reserved"):
+        client.search("x", filters={"schemata": "Document"})
+
+
+def test_search_emits_repeated_schemata_filters() -> None:
+    """Multiple ``schemata=[...]`` entries must all reach Aleph as repeated
+    ``filter:schemata=<name>`` query params, not collapse to one."""
+    seen: dict[str, list[str]] = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen["schemata"] = request.url.params.get_list("filter:schemata")
+        return _json({"results": [], "total": 0, "limit": 50})
+
+    with _make_client(handler) as client:
+        client.search("", schemata=["Document", "Page"])
+
+    assert seen["schemata"] == ["Document", "Page"]
+
+
 # ---------------------------------------------------------------------------
 # get_entity
 # ---------------------------------------------------------------------------
