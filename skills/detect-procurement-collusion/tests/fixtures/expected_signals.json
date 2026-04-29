@@ -1,0 +1,9 @@
+{
+  "comment": "Signal families the LLM eval expects detect-procurement-collusion to surface from this corpus. The LLM does not have to match the wording — only at least 3 of the 4 family keywords must appear in its claims. Family keys map to OECD bid-rigging schemes per skills/detect-procurement-collusion/SKILL.md (sections A-D).",
+  "expected_families": {
+    "rotation": ["rotation", "round-robin", "round robin", "cycle", "cycling", "alternat"],
+    "common_ownership": ["common owner", "shared owner", "same owner", "same administrator", "same address", "shared address", "common address", "ultimate beneficial owner", "ubo", "carla rossi", "via roma 12"],
+    "narrow_specs": ["narrow spec", "tailored spec", "brand-name", "brand name", "acmepave", "single supplier", "lock-in", "proprietary"],
+    "identical_clerical_errors": ["identical", "same typo", "same misspelling", "risurficazzione", "lavorazzione", "quatrocento", "shared template", "identical formatting", "identical text", "identical wording"]
+  }
+}
