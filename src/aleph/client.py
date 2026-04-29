@@ -304,6 +304,7 @@ class AlephClient:
         collection_id: str | None = None,
         schemata: list[str] | None = None,
         filters: dict[str, str] | None = None,
+        sort: str | None = None,
         limit: int = 50,
         offset: int = 0,
     ) -> SearchResults:
@@ -321,6 +322,16 @@ class AlephClient:
         becomes ``filter:properties.document=<doc_id>``). Reserved ``filter:``
         keys (``collection_id``, ``schemata``) are rejected — use the dedicated
         kwargs instead so the call site is greppable.
+
+        ``sort`` is forwarded as ``?sort=<spec>``. The spec is Aleph's own
+        format (``<field>:asc|desc``); not every ES field is sortable.
+        Aleph's known whitelist for the entity index includes ``caption``,
+        ``created_at``, ``updated_at``, ``indexed_at``, and a handful of FtM
+        property-derived fields (see openaleph_search ``Query.SORT_FIELDS``).
+        ``_id`` is NOT sortable in modern ES without explicit fielddata
+        opt-in, so the snapshot uses ``caption:asc`` as a stable-enough
+        primary sort — uniqueness within a real corpus is preserved by
+        ``fileName``-derived captions.
         """
         if limit < 1:
             raise ValueError("limit must be >= 1")
@@ -345,6 +356,10 @@ class AlephClient:
                         "search() kwarg instead"
                     )
                 params.append((f"filter:{key}", value))
+        if sort is not None:
+            if not sort:
+                raise ValueError("sort must be a non-empty string or None")
+            params.append(("sort", sort))
 
         payload = self._get("/entities", params=params)
         return _parse_model(SearchResults, payload, context="search")
