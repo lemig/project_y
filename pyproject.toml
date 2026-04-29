@@ -9,6 +9,9 @@ description = "Audit-grade AI investigator on OpenAleph + FtM (OLAF-internal)"
 requires-python = ">=3.11"
 dependencies = [
     "pydantic>=2.6",
+    "deepagents==0.4.12",
+    "langchain-openai==1.2.1",
+    "pyyaml==6.0.3",
     # httpx is BSD-3-Clause — compatible with both EUPL v1.2 and Apache 2.0
     # (the two licenses we may publish under). Required by src/aleph/client.py.
     "httpx>=0.27",
@@ -25,9 +28,10 @@ packages = ["src/agent", "src/aleph", "src/audit", "src/schema", "src/skills", "
 [tool.pytest.ini_options]
 pythonpath = ["src"]
 testpaths = ["tests"]
-# Integration tests hit the local Aleph dev stack (bin/dev-up). Run them
-# explicitly with `pytest -m integration`; default runs exclude them.
+# Integration tests hit either a live LLM endpoint (DeepAgentsHarness) or the
+# local Aleph dev stack (bin/dev-up). Run them explicitly with
+# `pytest -m integration`; default runs exclude them.
 addopts = "-m 'not integration'"
 markers = [
-    "integration: hits the local Aleph dev stack (skipped unless -m integration)",
+    "integration: live LLM endpoint (LLM_* env vars) or local Aleph dev stack (bin/dev-up); skipped by default",
 ]
