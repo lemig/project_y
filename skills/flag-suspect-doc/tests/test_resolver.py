@@ -15,10 +15,19 @@ import re
 from pathlib import Path
 
 import pytest
-
-from ._frontmatter import parse_skill_md
+import yaml
 
 _SKILL_MD = Path(__file__).resolve().parents[1] / "SKILL.md"
+_FRONTMATTER_OPEN = "---\n"
+_FRONTMATTER_CLOSE = "\n---\n"
+
+
+def _load_resolver() -> re.Pattern[str]:
+    raw = _SKILL_MD.read_text(encoding="utf-8-sig").replace("\r\n", "\n")
+    end = raw.find(_FRONTMATTER_CLOSE, len(_FRONTMATTER_OPEN))
+    fm = yaml.safe_load(raw[len(_FRONTMATTER_OPEN) : end])
+    return re.compile(fm["resolver"])
+
 
 # Briefs that MUST route to flag-suspect-doc.
 POSITIVE_BRIEFS: tuple[str, ...] = (
@@ -55,8 +64,7 @@ NEGATIVE_BRIEFS: tuple[str, ...] = (
 
 @pytest.fixture(scope="module")
 def resolver() -> re.Pattern[str]:
-    fm, _ = parse_skill_md(_SKILL_MD)
-    return re.compile(fm["resolver"])
+    return _load_resolver()
 
 
 @pytest.mark.parametrize("brief", POSITIVE_BRIEFS)

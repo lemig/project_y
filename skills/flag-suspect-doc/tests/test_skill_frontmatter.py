@@ -12,13 +12,14 @@ import re
 from pathlib import Path
 
 import pytest
+import yaml
 
 from skills.skill import SkillFrontmatter
 
-from ._frontmatter import parse_skill_md
-
 _SKILL_DIR = Path(__file__).resolve().parents[1]
 _SKILL_MD = _SKILL_DIR / "SKILL.md"
+_FRONTMATTER_OPEN = "---\n"
+_FRONTMATTER_CLOSE = "\n---\n"
 
 _REQUIRED_KEYS = {
     "name",
@@ -31,9 +32,22 @@ _REQUIRED_KEYS = {
 }
 
 
+def _read_skill() -> tuple[str, str]:
+    raw = _SKILL_MD.read_text(encoding="utf-8-sig").replace("\r\n", "\n")
+    assert raw.startswith(_FRONTMATTER_OPEN), "SKILL.md must open with a '---' frontmatter block"
+    end = raw.find(_FRONTMATTER_CLOSE, len(_FRONTMATTER_OPEN))
+    assert end >= 0, "SKILL.md frontmatter has no closing '---' delimiter"
+    front = raw[len(_FRONTMATTER_OPEN) : end]
+    body = raw[end + len(_FRONTMATTER_CLOSE) :]
+    return front, body
+
+
 @pytest.fixture(scope="module")
 def parsed() -> tuple[dict[str, str], str]:
-    return parse_skill_md(_SKILL_MD)
+    front, body = _read_skill()
+    fm = yaml.safe_load(front)
+    assert isinstance(fm, dict), "frontmatter must parse to a mapping"
+    return fm, body
 
 
 class TestFrontmatter:
@@ -50,7 +64,7 @@ class TestFrontmatter:
     def test_validates_against_pydantic_model(self, parsed: tuple[dict[str, str], str]) -> None:
         fm, _ = parsed
         # Round-trip through the locked SkillFrontmatter model — same gate
-        # the harness will use at load time.
+        # the harness uses at load time.
         model = SkillFrontmatter(**fm)
         assert model.name == "flag-suspect-doc"
         assert model.version == "v1"

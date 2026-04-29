@@ -1,0 +1,67 @@
+{
+  "documents": [
+    {
+      "doc_id": "doc_42",
+      "page": 1,
+      "source_lang": "en",
+      "text": "Acme Corp is named as the contracting party in tender 2021/044.",
+      "extractor_version": "tesseract-5.3.1@aleph-3.18",
+      "mentions": [
+        {
+          "entity_name": "Acme Corp",
+          "char_offset_start": 0,
+          "char_offset_end": 9,
+          "why_relevant": "Named as the contracting party in tender 2021/044."
+        }
+      ]
+    },
+    {
+      "doc_id": "doc_77",
+      "page": 2,
+      "source_lang": "it",
+      "text": "Società Beta S.r.l. è la controparte indicata nel contratto di appalto 2021/044.",
+      "extractor_version": "tesseract-5.3.1@aleph-3.18",
+      "mentions": [
+        {
+          "entity_name": "Società Beta S.r.l.",
+          "char_offset_start": 0,
+          "char_offset_end": 19,
+          "quote_text_en": "Beta Company Ltd.",
+          "translator_of_record": "test-translator@v1",
+          "why_relevant": "Named as the counterparty in the procurement contract."
+        }
+      ]
+    },
+    {
+      "doc_id": "doc_88",
+      "page": 1,
+      "source_lang": "en",
+      "text": "Director John Doe signed the wire transfer authorization on 12 March 2024.",
+      "extractor_version": "tesseract-5.3.1@aleph-3.18",
+      "mentions": [
+        {
+          "entity_name": "John Doe",
+          "char_offset_start": 9,
+          "char_offset_end": 17,
+          "why_relevant": "Director who authorized the wire transfer under review."
+        }
+      ]
+    },
+    {
+      "doc_id": "doc_99",
+      "page": 3,
+      "source_lang": "fr",
+      "text": "Le bénéficiaire effectif est Monsieur Dupont, résident à Paris.",
+      "extractor_version": "tesseract-5.3.1@aleph-3.18",
+      "mentions": [
+        {
+          "entity_name": "Monsieur Dupont",
+          "char_offset_start": 29,
+          "char_offset_end": 44,
+          "translator_of_record": "test-translator@v1:translation_failed",
+          "why_relevant": "Identified as the beneficial owner; translation pipeline failed for this document."
+        }
+      ]
+    }
+  ]
+}

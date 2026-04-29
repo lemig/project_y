@@ -265,19 +265,23 @@ class TestGroundTruthNotesAreSchemaValid:
         assert meta["expected_signals"] == []
 
 
+_REQUIRED_LLM_ENV = ("LLM_BASE_URL", "LLM_API_KEY", "LLM_MODEL")
+
+
+@pytest.mark.integration
 @pytest.mark.skipif(
-    not os.environ.get("LLM_BASE_URL"),
+    not all(k in os.environ for k in _REQUIRED_LLM_ENV),
     reason=(
-        "Live LLM eval requires LLM_BASE_URL/LLM_API_KEY/LLM_MODEL plus the "
-        "harness adapter, REST client, and substring quote verifier — none "
-        "in scope for this skill PR. Wire and un-skip when those land."
+        "Set LLM_BASE_URL, LLM_API_KEY, LLM_MODEL to run the live-endpoint "
+        "flag-suspect-doc eval."
     ),
 )
 def test_llm_eval_against_fixture_corpus() -> None:
-    # Placeholder: when the harness adapter exists, this test will load
-    # SKILL.md, run it against the three fixtures with the configured LLM,
-    # and assert (a) one Note for invoice_high_risk and one for
-    # contract_unexplained_intermediary, (b) zero Notes for invoice_clean,
-    # (c) every emitted Note has at least one exact_quote that survives
-    # the substring quote verifier against the fixture text.
-    pytest.skip("placeholder — wire when harness + verifier land")
+    # End-to-end LLM eval placeholder. When `spawn_subagent` skill execution
+    # lands in DeepAgentsHarness, this test will load SKILL.md, run it
+    # against the three fixtures, and assert (a) one Note for
+    # invoice_high_risk and one for contract_unexplained_intermediary,
+    # (b) zero Notes for invoice_clean, (c) every emitted Note has at
+    # least one exact_quote that survives the substring quote verifier
+    # against the fixture text.
+    pytest.skip("placeholder — wire once spawn_subagent skill execution lands")
