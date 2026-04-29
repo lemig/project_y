@@ -117,10 +117,16 @@ def _run_script(tmp_path: Path) -> tuple[DeepAgentsHarness, str]:
     brief = Brief(text=_SCRIPT_BRIEF_TEXT, corpus_snapshot_hash=_BRIEF_HASH)
     h.planner_run(brief)
 
+    # spawn_subagent is a v2 stub: validates dispatch + records audit state, then
+    # raises NotImplementedError. The golden script captures the recorded state.
+    bh = brief.compute_hash()
     for skill_id in _SCRIPT_DISPATCH:
-        h.spawn_subagent(
-            SubagentTask(skill_id=skill_id, inputs={}, parent_brief_hash=_BRIEF_HASH)
-        )
+        try:
+            h.spawn_subagent(
+                SubagentTask(skill_id=skill_id, inputs={}, parent_brief_hash=bh)
+            )
+        except NotImplementedError:
+            pass
 
     cid = h.checkpoint()
     return h, cid
