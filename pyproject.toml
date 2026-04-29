@@ -9,6 +9,9 @@ description = "Audit-grade AI investigator on OpenAleph + FtM (OLAF-internal)"
 requires-python = ">=3.11"
 dependencies = [
     "pydantic>=2.6",
+    "deepagents==0.4.12",
+    "langchain-openai==1.2.1",
+    "pyyaml==6.0.3",
 ]
 
 [project.optional-dependencies]
@@ -22,3 +25,6 @@ packages = ["src/agent", "src/audit", "src/schema", "src/skills", "src/verifier"
 [tool.pytest.ini_options]
 pythonpath = ["src"]
 testpaths = ["tests"]
+markers = [
+    "integration: live-endpoint test (skipped unless LLM_* env vars are set)",
+]
