@@ -10,12 +10,14 @@ Asserts that:
 from __future__ import annotations
 
 import re
+from pathlib import Path
 
 from pydantic import ValidationError
 
+from agent.deep_agents_harness import _parse_frontmatter, _split_frontmatter
 from skills.skill import SkillFrontmatter
 
-from _find_money_flow_lib import SKILL_MD, parse_flat_yaml, split_frontmatter
+_SKILL_MD = Path(__file__).resolve().parent.parent / "SKILL.md"
 
 EXPECTED_KEYS = {
     "name",
@@ -29,24 +31,21 @@ EXPECTED_KEYS = {
 
 
 def test_skill_md_exists() -> None:
-    assert SKILL_MD.is_file(), f"missing SKILL.md at {SKILL_MD}"
+    assert _SKILL_MD.is_file(), f"missing SKILL.md at {_SKILL_MD}"
 
 
 def test_frontmatter_parses() -> None:
-    fm_text, body = split_frontmatter(SKILL_MD.read_text(encoding="utf-8"))
-    assert fm_text.strip(), "frontmatter is empty"
+    raw = _SKILL_MD.read_text(encoding="utf-8-sig")
+    front, body = _split_frontmatter(raw)
+    assert front.strip(), "frontmatter is empty"
     assert body.strip(), "SKILL.md body is empty"
-    parsed = parse_flat_yaml(fm_text)
-    assert set(parsed.keys()) == EXPECTED_KEYS, (
-        f"frontmatter keys mismatch: got {sorted(parsed.keys())}, "
-        f"expected {sorted(EXPECTED_KEYS)}"
-    )
 
 
 def test_frontmatter_validates_against_pydantic_contract() -> None:
-    fm_text, _ = split_frontmatter(SKILL_MD.read_text(encoding="utf-8"))
-    parsed = parse_flat_yaml(fm_text)
-    fm = SkillFrontmatter(**parsed)  # raises ValidationError on contract drift
+    raw = _SKILL_MD.read_text(encoding="utf-8-sig")
+    front, _ = _split_frontmatter(raw)
+    fm = _parse_frontmatter(front)
+    assert isinstance(fm, SkillFrontmatter)
     assert fm.name == "find-money-flow"
     assert fm.version == "v1"
     assert fm.output_schema_ref == "schema.note.Note"
@@ -55,20 +54,38 @@ def test_frontmatter_validates_against_pydantic_contract() -> None:
     assert "@" in fm.owner and "olaf" in fm.owner.lower()
 
 
+def test_frontmatter_keys_match_locked_set() -> None:
+    """The 7 locked keys must all be present (none missing, none extra).
+
+    SkillFrontmatter is `extra="forbid"`, so the validator above already
+    rejects extras; this assertion documents the locked keys explicitly so
+    a reviewer doesn't have to read the model definition.
+    """
+    raw = _SKILL_MD.read_text(encoding="utf-8-sig")
+    front, _ = _split_frontmatter(raw)
+    fm = _parse_frontmatter(front)
+    assert set(SkillFrontmatter.model_fields.keys()) == EXPECTED_KEYS
+    # And every locked field is populated on this skill's frontmatter.
+    assert all(getattr(fm, k) for k in EXPECTED_KEYS)
+
+
 def test_resolver_compiles() -> None:
-    fm_text, _ = split_frontmatter(SKILL_MD.read_text(encoding="utf-8"))
-    parsed = parse_flat_yaml(fm_text)
+    raw = _SKILL_MD.read_text(encoding="utf-8-sig")
+    front, _ = _split_frontmatter(raw)
+    fm = _parse_frontmatter(front)
     # If the resolver doesn't compile, this is a hard contract violation.
-    re.compile(parsed["resolver"])
+    re.compile(fm.resolver)
 
 
-def test_extra_field_in_frontmatter_would_fail_validation() -> None:
+def test_extra_field_would_be_rejected() -> None:
     """Self-test: prove that the frozen contract still rejects extras."""
-    fm_text, _ = split_frontmatter(SKILL_MD.read_text(encoding="utf-8"))
-    parsed = parse_flat_yaml(fm_text)
-    parsed["unauthorized"] = "value"
+    raw = _SKILL_MD.read_text(encoding="utf-8-sig")
+    front, _ = _split_frontmatter(raw)
+    fm = _parse_frontmatter(front)
+    payload = fm.model_dump()
+    payload["unauthorized"] = "value"
     try:
-        SkillFrontmatter(**parsed)
+        SkillFrontmatter(**payload)
     except ValidationError:
         return
     raise AssertionError(

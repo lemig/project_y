@@ -28,24 +28,19 @@ from pathlib import Path
 
 import pytest
 
+# Reuse the harness's git-blob SHA helper so test-computed skill_version
+# matches what `DeepAgentsHarness.load_skill` produces at runtime —
+# golden-replay-equivalent.
+from agent.deep_agents_harness import _git_blob_sha1
 from schema.brief import Brief
 from schema.note import Note, Quote
 
-from _find_money_flow_lib import FIXTURES, SKILL_MD
+_SKILL_MD = Path(__file__).resolve().parent.parent / "SKILL.md"
+_FIXTURES = Path(__file__).resolve().parent / "fixtures"
 
 
 def _sha256(b: bytes) -> str:
     return hashlib.sha256(b).hexdigest()
-
-
-def _git_blob_sha1(b: bytes) -> str:
-    """40-char lowercase hex; matches the schema's `skill_version` shape.
-
-    Real harness will use the git blob SHA of SKILL.md at load time. For
-    the test we use a content-addressed sha1 over the file bytes — same
-    format, deterministic across runs.
-    """
-    return hashlib.sha1(b).hexdigest()
 
 
 @dataclass(frozen=True)
@@ -57,7 +52,7 @@ class _Doc:
 
     @classmethod
     def load(cls, doc_id: str, filename: str) -> "_Doc":
-        path = FIXTURES / filename
+        path = _FIXTURES / filename
         text = path.read_text(encoding="utf-8")
         return cls(doc_id=doc_id, text=text, path=path, sha256=_sha256(text.encode("utf-8")))
 
@@ -94,7 +89,7 @@ def brief() -> Brief:
     # concatenation of the three fixture files in id-sorted order so the
     # baseline is reproducible.
     fixture_blob = b"".join(
-        (FIXTURES / f).read_bytes() for f in ("doc-001.txt", "doc-002.txt", "doc-003.txt")
+        (_FIXTURES / f).read_bytes() for f in ("doc-001.txt", "doc-002.txt", "doc-003.txt")
     )
     return Brief(
         text="Trace the money out of contract C-2024-077.",
@@ -234,7 +229,7 @@ def _build_note(
 def test_fixture_chain_builds_valid_notes(
     brief: Brief, expected_hops: list[_ExpectedHop]
 ) -> None:
-    skill_version = _git_blob_sha1(SKILL_MD.read_bytes())
+    skill_version = _git_blob_sha1(_SKILL_MD.read_bytes())
     notes = [
         _build_note(
             h,

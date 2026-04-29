@@ -28,10 +28,17 @@ packages = ["src/agent", "src/aleph", "src/audit", "src/schema", "src/skills", "
 [tool.pytest.ini_options]
 pythonpath = ["src"]
 testpaths = ["tests", "skills"]
+# --import-mode=importlib: each v2 skill has its own tests/ dir with files
+# named test_resolver.py, test_integration.py, test_skill_frontmatter.py.
+# With the default import mode (prepend) pytest treats these as colliding
+# top-level modules and collection fails after the first one wins. importlib
+# mode imports each test file under a unique path-derived name so siblings
+# coexist.
+#
 # Integration tests hit either a live LLM endpoint (DeepAgentsHarness) or the
 # local Aleph dev stack (bin/dev-up). Run them explicitly with
 # `pytest -m integration`; default runs exclude them.
-addopts = "-m 'not integration'"
+addopts = "--import-mode=importlib -m 'not integration'"
 markers = [
     "integration: live LLM endpoint (LLM_* env vars) or local Aleph dev stack (bin/dev-up); skipped by default",
 ]

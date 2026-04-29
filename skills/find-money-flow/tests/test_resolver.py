@@ -9,16 +9,19 @@ steal work from other skills (e.g. `narrate-fraud-pattern`,
 from __future__ import annotations
 
 import re
+from pathlib import Path
 
 import pytest
 
-from _find_money_flow_lib import SKILL_MD, parse_flat_yaml, split_frontmatter
+from agent.deep_agents_harness import _parse_frontmatter, _split_frontmatter
+
+_SKILL_MD = Path(__file__).resolve().parent.parent / "SKILL.md"
 
 
 @pytest.fixture(scope="module")
 def resolver() -> re.Pattern[str]:
-    fm_text, _ = split_frontmatter(SKILL_MD.read_text(encoding="utf-8"))
-    return re.compile(parse_flat_yaml(fm_text)["resolver"])
+    front, _ = _split_frontmatter(_SKILL_MD.read_text(encoding="utf-8-sig"))
+    return re.compile(_parse_frontmatter(front).resolver)
 
 
 # Briefs that MUST route to find-money-flow.
@@ -78,8 +81,8 @@ def test_resolver_match_is_recoverable_for_audit_trail() -> None:
     so an audit reviewer can see WHICH phrasing in the brief routed the
     work here. Verify the match group is non-empty for a realistic brief.
     """
-    fm_text, _ = split_frontmatter(SKILL_MD.read_text(encoding="utf-8"))
-    pattern = re.compile(parse_flat_yaml(fm_text)["resolver"])
+    front, _ = _split_frontmatter(_SKILL_MD.read_text(encoding="utf-8-sig"))
+    pattern = re.compile(_parse_frontmatter(front).resolver)
     brief = "Please trace the money from contract C-2024-077."
     m = pattern.search(brief)
     assert m is not None
