@@ -31,7 +31,13 @@ from aleph.client import (
     SearchResults,
     ServerError,
 )
-from aleph.document_source import AlephDocumentSource, DocumentSource
+from aleph.document_source import (
+    AlephDocumentSource,
+    DocumentNotFound,
+    DocumentSource,
+    PageNotFound,
+    TransientSourceError,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -565,7 +571,9 @@ def test_transport_error_wrapped(exc_factory) -> None:
 
 
 # ---------------------------------------------------------------------------
-# DocumentSource Protocol
+# DocumentSource Protocol — must match src/verifier/substring.py's contract:
+# ``get_text(doc_id, page=None) -> str`` + DocumentNotFound / PageNotFound /
+# TransientSourceError exceptions. The verifier handles NFC + sha256 itself.
 # ---------------------------------------------------------------------------
 
 
@@ -576,7 +584,7 @@ def test_aleph_document_source_satisfies_protocol() -> None:
     assert isinstance(source, DocumentSource)
 
 
-def test_aleph_document_source_delegates_to_client() -> None:
+def test_aleph_document_source_returns_raw_text() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         return _json(
             {
@@ -587,31 +595,129 @@ def test_aleph_document_source_delegates_to_client() -> None:
         )
 
     with _make_client(handler) as client:
-        source = AlephDocumentSource(client)
-        out = source.get_document_text("doc-1")
+        text = AlephDocumentSource(client).get_text("doc-1")
 
-    assert out.text == "hello world"
-    assert out.doc_id == "doc-1"
+    assert text == "hello world"
+    assert isinstance(text, str)
+
+
+def test_aleph_document_source_full_doc_missing_raises_document_not_found() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return _json({"status": "error", "message": "no such doc"}, status=404)
+
+    with _make_client(handler) as client:
+        with pytest.raises(DocumentNotFound):
+            AlephDocumentSource(client).get_text("doc-1")
+
+
+def test_aleph_document_source_full_doc_missing_body_raises_document_not_found() -> None:
+    """An entity with no bodyText is treated as 'doc unverifiable' for the verifier."""
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return _json({"id": "doc-1", "schema": "Document", "properties": {}})
+
+    with _make_client(handler) as client:
+        with pytest.raises(DocumentNotFound):
+            AlephDocumentSource(client).get_text("doc-1")
+
+
+def test_aleph_document_source_page_missing_doc_raises_document_not_found() -> None:
+    """page=N with a missing doc must surface as DocumentNotFound, not PageNotFound."""
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return _json({"status": "error", "message": "no such doc"}, status=404)
+
+    with _make_client(handler) as client:
+        with pytest.raises(DocumentNotFound):
+            AlephDocumentSource(client).get_text("doc-1", page=3)
+
+
+def test_aleph_document_source_page_missing_page_raises_page_not_found() -> None:
+    """Doc exists, page does not — the verifier needs PageNotFound, not DocumentNotFound."""
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/api/2/entities/doc-1":
+            # doc-existence probe succeeds
+            return _json(
+                {"id": "doc-1", "schema": "Document", "properties": {"fileName": ["x.pdf"]}}
+            )
+        # page search returns empty
+        return _json({"results": [], "total": 0, "limit": 1})
+
+    with _make_client(handler) as client:
+        with pytest.raises(PageNotFound):
+            AlephDocumentSource(client).get_text("doc-1", page=99)
+
+
+def test_aleph_document_source_page_returns_text_when_present() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/api/2/entities/doc-1":
+            return _json(
+                {"id": "doc-1", "schema": "Document", "properties": {"fileName": ["x.pdf"]}}
+            )
+        return _json(
+            {
+                "results": [
+                    {
+                        "id": "page-1-3",
+                        "schema": "Page",
+                        "properties": {
+                            "bodyText": ["page three text"],
+                            "document": ["doc-1"],
+                            "index": ["3"],
+                        },
+                    }
+                ],
+                "total": 1,
+                "limit": 1,
+            }
+        )
+
+    with _make_client(handler) as client:
+        text = AlephDocumentSource(client).get_text("doc-1", page=3)
+
+    assert text == "page three text"
+
+
+@pytest.mark.parametrize(
+    "make_response",
+    [
+        lambda req: _json({"status": "error", "message": "rate limited"}, status=429),
+        lambda req: _json({"status": "error", "message": "5xx"}, status=500),
+        lambda req: _json({"status": "error", "message": "bad gateway"}, status=503),
+    ],
+    ids=["rate-limit", "server-error", "bad-gateway"],
+)
+def test_aleph_document_source_retryable_errors_become_transient(make_response) -> None:
+    """429 + 5xx must surface as TransientSourceError so the verifier's retry wrapper handles them."""
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return make_response(request)
+
+    with _make_client(handler) as client:
+        with pytest.raises(TransientSourceError):
+            AlephDocumentSource(client).get_text("doc-1")
+
+
+def test_aleph_document_source_transport_error_becomes_transient() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        raise httpx.ConnectError("network down", request=request)
+
+    with _make_client(handler) as client:
+        with pytest.raises(TransientSourceError):
+            AlephDocumentSource(client).get_text("doc-1")
 
 
 def test_protocol_accepts_alternative_implementations() -> None:
     """The verifier must be able to substitute a fake source in tests."""
 
     class FakeSource:
-        def get_document_text(self, doc_id: str, *, page: int | None = None) -> DocumentText:
-            text = f"fake text for {doc_id}"
-            return DocumentText(
-                doc_id=doc_id,
-                page=page,
-                text=text,
-                extractor_version="fake@0",
-                normalized_text_sha256=_sha256_nfc(text),
-            )
+        def get_text(self, doc_id: str, page: int | None = None) -> str:
+            return f"fake text for {doc_id} page={page}"
 
     source = FakeSource()
     assert isinstance(source, DocumentSource)
-    out = source.get_document_text("doc-x", page=2)
-    assert out.text == "fake text for doc-x"
+    assert source.get_text("doc-x", page=2) == "fake text for doc-x page=2"
 
 
 # ---------------------------------------------------------------------------

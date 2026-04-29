@@ -1,8 +1,9 @@
 """Aleph REST client.
 
 project_y talks to OpenAleph over REST only — never imports its AGPL packages.
-This module exposes a typed client plus a `DocumentSource` protocol that the
-substring quote verifier (workspace C) depends on.
+This module exposes a typed client plus the canonical ``DocumentSource``
+Protocol that the substring quote verifier (``src/verifier/substring.py``)
+reads through.
 """
 
 from aleph.client import (
@@ -21,7 +22,13 @@ from aleph.client import (
     SearchResults,
     ServerError,
 )
-from aleph.document_source import AlephDocumentSource, DocumentSource
+from aleph.document_source import (
+    AlephDocumentSource,
+    DocumentNotFound,
+    DocumentSource,
+    PageNotFound,
+    TransientSourceError,
+)
 
 __all__ = [
     "AlephClient",
@@ -32,12 +39,15 @@ __all__ = [
     "AlephTransportError",
     "AuthenticationError",
     "Collection",
+    "DocumentNotFound",
     "DocumentSource",
     "DocumentText",
     "Entity",
     "NotFoundError",
+    "PageNotFound",
     "PermissionDeniedError",
     "RateLimitError",
     "SearchResults",
     "ServerError",
+    "TransientSourceError",
 ]
