@@ -39,7 +39,7 @@ For full project context see `CLAUDE.md` at the repo root (architectural premise
 
 Short version:
 - **Substrate:** OpenAleph + Follow the Money data model (REST API only; no AGPL imports).
-- **Harness:** Deep Agents (Apache 2.0, pinned) wrapped behind an internal `AgentHarness` adapter for swappability.
+- **Harness:** Deep Agents (MIT, pinned exact at `deepagents==0.4.12`) wrapped behind an internal `AgentHarness` adapter for swappability. Concrete adapter at `src/agent/deep_agents_harness.py`; license review under `docs/dependency-decisions/`.
 - **Skills:** Investigative methodology as markdown SKILL.md files with YAML frontmatter (resolver + verifier + tests). Skillify protocol borrowed from GBrain as methodology, not as a code dependency.
 - **Determinism:** Substring quote verifier + FtM validators + audit log are pure deterministic Python — where trust lives.
 - **Audit trail:** Every observation note backed by at least one exact quote with full provenance (doc_id, page, char_offset, extractor_version, normalized_text_sha256). Substring verification is a hard generation-time gate.
