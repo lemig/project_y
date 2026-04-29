@@ -202,6 +202,26 @@ def test_get_entity_rejects_blank_id() -> None:
         client.get_entity("")
 
 
+def test_get_entity_url_quotes_path_segment() -> None:
+    """An LLM-chosen entity_id must not be able to rewrite the request path.
+
+    ``../collections/1`` would otherwise traverse out of /entities/ into a
+    different resource — an SSRF / authorization-bypass primitive. We assert
+    against ``raw_path`` (the bytes that go on the wire), not ``path``,
+    because httpx decodes %-escapes when surfacing ``url.path``.
+    """
+    seen: dict[str, bytes] = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen["raw_path"] = request.url.raw_path
+        return _json({"id": "x", "schema": "Document", "properties": {}})
+
+    with _make_client(handler) as client:
+        client.get_entity("../collections/1")
+
+    assert seen["raw_path"] == b"/api/2/entities/..%2Fcollections%2F1"
+
+
 # ---------------------------------------------------------------------------
 # list_collections
 # ---------------------------------------------------------------------------
@@ -294,12 +314,32 @@ def test_get_document_text_joins_multivalued_body() -> None:
     assert out.normalized_text_sha256 == _sha256_nfc("chunk one\nchunk two")
 
 
-def test_get_document_text_missing_body_returns_empty_string() -> None:
-    # Aleph excludes `bodyText` by default in the detail view; surface this
-    # cleanly as empty text rather than crashing — the verifier will fail
-    # the substring check downstream and log loudly.
+def test_get_document_text_missing_body_raises_not_found() -> None:
+    # Aleph excludes `bodyText` by default in the detail view; "no bodyText
+    # at all" must surface as NotFoundError per the DocumentSource Protocol
+    # contract — silent loss (returning empty text) would let the verifier
+    # drop real notes for what's actually a config / extraction-not-run bug.
     def handler(request: httpx.Request) -> httpx.Response:
         return _json({"id": "doc-1", "schema": "Document", "properties": {}})
+
+    with _make_client(handler) as client:
+        with pytest.raises(NotFoundError):
+            client.get_document_text("doc-1")
+
+
+def test_get_document_text_empty_extraction_returns_empty_text() -> None:
+    # Distinct from the above: bodyText IS present but the extractor produced
+    # no text (legitimate for a blank page / image-only doc with no OCR hits).
+    # That's allowed through — the verifier will fail downstream substring
+    # checks loudly, which is the correct signal.
+    def handler(request: httpx.Request) -> httpx.Response:
+        return _json(
+            {
+                "id": "doc-1",
+                "schema": "Document",
+                "properties": {"bodyText": [""]},
+            }
+        )
 
     with _make_client(handler) as client:
         out = client.get_document_text("doc-1")
@@ -354,6 +394,83 @@ def test_get_document_text_missing_page_raises_not_found() -> None:
     with _make_client(handler) as client:
         with pytest.raises(NotFoundError):
             client.get_document_text("doc-1", page=99)
+
+
+def test_get_document_text_page_post_filters_mismatched_doc() -> None:
+    """Aleph's filter:properties.* is best-effort — defend against a Page
+    that surfaces but actually belongs to a different document."""
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return _json(
+            {
+                "results": [
+                    {
+                        "id": "page-X-3",
+                        "schema": "Page",
+                        "properties": {
+                            "bodyText": ["wrong text"],
+                            "document": ["doc-OTHER"],
+                            "index": ["3"],
+                        },
+                    }
+                ],
+                "total": 1,
+                "limit": 1,
+            }
+        )
+
+    with _make_client(handler) as client:
+        with pytest.raises(NotFoundError):
+            client.get_document_text("doc-1", page=3)
+
+
+def test_get_document_text_page_post_filters_mismatched_index() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return _json(
+            {
+                "results": [
+                    {
+                        "id": "page-1-7",
+                        "schema": "Page",
+                        "properties": {
+                            "bodyText": ["wrong page"],
+                            "document": ["doc-1"],
+                            "index": ["7"],
+                        },
+                    }
+                ],
+                "total": 1,
+                "limit": 1,
+            }
+        )
+
+    with _make_client(handler) as client:
+        with pytest.raises(NotFoundError):
+            client.get_document_text("doc-1", page=3)
+
+
+def test_get_document_text_page_missing_body_raises() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return _json(
+            {
+                "results": [
+                    {
+                        "id": "page-1-3",
+                        "schema": "Page",
+                        "properties": {
+                            "document": ["doc-1"],
+                            "index": ["3"],
+                        },
+                    }
+                ],
+                "total": 1,
+                "limit": 1,
+            }
+        )
+
+    with _make_client(handler) as client:
+        with pytest.raises(NotFoundError):
+            client.get_document_text("doc-1", page=3)
 
 
 def test_get_document_text_rejects_invalid_page() -> None:
@@ -422,9 +539,25 @@ def test_non_object_response_raises_response_error() -> None:
             client.get_entity("x")
 
 
-def test_transport_error_wrapped() -> None:
+@pytest.mark.parametrize(
+    "exc_factory",
+    [
+        lambda req: httpx.ConnectError("connect failed", request=req),
+        lambda req: httpx.ReadTimeout("read timeout", request=req),
+        lambda req: httpx.WriteError("write failed", request=req),
+        lambda req: httpx.RemoteProtocolError("bad framing", request=req),
+    ],
+    ids=["connect", "read-timeout", "write", "remote-protocol"],
+)
+def test_transport_error_wrapped(exc_factory) -> None:
+    """Every httpx.RequestError subclass must surface as AlephTransportError.
+
+    These have different semantics for "did Aleph commit the read?" but from
+    the audit log's perspective they all mean: we don't know what happened.
+    """
+
     def handler(request: httpx.Request) -> httpx.Response:
-        raise httpx.ConnectError("boom", request=request)
+        raise exc_factory(request)
 
     with _make_client(handler) as client:
         with pytest.raises(AlephTransportError):

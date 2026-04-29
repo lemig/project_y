@@ -19,9 +19,10 @@ import hashlib
 import json
 import unicodedata
 from typing import Any
+from urllib.parse import quote
 
 import httpx
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 # ---------------------------------------------------------------------------
 # Hashing — must match Brief.compute_hash's NFC convention (src/schema/brief.py).
@@ -206,7 +207,16 @@ def _decode_json(response: httpx.Response) -> Any:
 
 
 def _join_body_text(values: list[Any]) -> str:
-    """Aleph stores text properties as lists of strings; join with newlines."""
+    """Aleph stores text properties as lists of strings; join with newlines.
+
+    The ``\\n`` between chunks is synthesized by this client — it does not
+    appear in the original extractor output. Workspace C's substring quote
+    verifier MUST treat the join boundaries as untrustable: a quote that
+    straddles a synthetic newline points at offsets the OCR layer never
+    produced. Until we surface chunk boundaries explicitly, the verifier
+    should reject any quote whose ``[start, end)`` window crosses a ``\\n``
+    that lies between two source chunks.
+    """
     return "\n".join(str(v) for v in values if v is not None)
 
 
@@ -310,10 +320,16 @@ class AlephClient:
         return _parse_model(SearchResults, payload, context="search")
 
     def get_entity(self, entity_id: str) -> Entity:
-        """Fetch one FtM entity by id (``GET /entities/{id}``)."""
+        """Fetch one FtM entity by id (``GET /entities/{id}``).
+
+        ``entity_id`` is URL-quoted before being inserted into the path so an
+        LLM-chosen id like ``"../collections/1"`` cannot rewrite the request
+        path. Audit-grade tools cannot afford SSRF / authorization-bypass
+        primitives sitting in the substrate adapter.
+        """
         if not entity_id:
             raise ValueError("entity_id must be a non-empty string")
-        payload = self._get(f"/entities/{entity_id}")
+        payload = self._get(f"/entities/{quote(entity_id, safe='')}")
         return _parse_model(Entity, payload, context=f"entity {entity_id}")
 
     def list_collections(self, *, limit: int = 50, offset: int = 0) -> list[Collection]:
@@ -344,8 +360,22 @@ class AlephClient:
 
         ``page=None`` returns the full document's ``properties.bodyText``.
         ``page=N`` (1-based) finds the matching ``Page`` child entity and
-        returns its ``bodyText``. Raises :class:`NotFoundError` if no Page
-        with that index exists.
+        returns its ``bodyText``.
+
+        Raises :class:`NotFoundError` when:
+
+        * no entity exists at ``doc_id``,
+        * the entity has no ``bodyText`` property at all (extraction not run,
+          or Aleph excluded the field — pass ``excludes=`` to the entity
+          endpoint at the deployment layer to include it),
+        * ``page=N`` is requested but no matching ``Page`` child exists, or
+        * the page result Aleph returns does not actually belong to ``doc_id``
+          / does not match ``index=N`` (defensive — Aleph's
+          ``filter:properties.*`` is best-effort).
+
+        Silent loss is unacceptable per CLAUDE.md. An empty extraction
+        (``bodyText=[""]``) is allowed through and surfaces as an empty
+        ``text``; missing extraction is not.
 
         The returned ``text`` is NFC-normalized and ``normalized_text_sha256``
         is the sha256 of those NFC-normalized bytes — the convention the
@@ -358,7 +388,15 @@ class AlephClient:
 
         if page is None:
             entity = self.get_entity(doc_id)
-            body_values = entity.properties.get("bodyText", [])
+            if "bodyText" not in entity.properties:
+                raise NotFoundError(
+                    404,
+                    f"Document {doc_id} has no bodyText property — extraction "
+                    "may not have run, or Aleph excluded the field from this "
+                    "response. Configure the deployment to include bodyText.",
+                    body=None,
+                )
+            body_values = entity.properties["bodyText"]
             text = _nfc(_join_body_text(body_values))
             return DocumentText(
                 doc_id=doc_id,
@@ -386,7 +424,31 @@ class AlephClient:
                 body=None,
             )
         page_entity = results.results[0]
-        body_values = page_entity.properties.get("bodyText", [])
+
+        # Aleph's filter:properties.* is best-effort (tokenized in some
+        # versions); verify the result actually belongs to this doc/page
+        # before trusting it. Otherwise an unrelated Page could be surfaced
+        # and its text would substring-match while pointing at the wrong
+        # document — a court-defensibility break.
+        doc_refs = page_entity.properties.get("document", [])
+        index_refs = page_entity.properties.get("index", [])
+        if doc_id not in doc_refs or str(page) not in index_refs:
+            raise NotFoundError(
+                404,
+                f"Aleph returned Page entity {page_entity.id} for "
+                f"doc={doc_id} page={page}, but its properties don't match "
+                f"(document={doc_refs!r}, index={index_refs!r})",
+                body=None,
+            )
+
+        if "bodyText" not in page_entity.properties:
+            raise NotFoundError(
+                404,
+                f"Page entity {page_entity.id} (doc={doc_id} page={page}) "
+                "has no bodyText property",
+                body=None,
+            )
+        body_values = page_entity.properties["bodyText"]
         text = _nfc(_join_body_text(body_values))
         return DocumentText(
             doc_id=doc_id,
@@ -405,10 +467,10 @@ def _parse_model(model: type, payload: Any, *, context: str) -> Any:
         )
     try:
         return model.model_validate(payload)
-    except ValueError as exc:
-        # pydantic.ValidationError subclasses ValueError. We catch ValueError
-        # (not bare Exception) so the call still respects CLAUDE.md's rule
-        # against generic except clauses.
+    except ValidationError as exc:
+        # Catch ValidationError specifically (not its ValueError parent) so
+        # bugs in custom validators surface as themselves rather than being
+        # reformatted as response errors.
         raise AlephResponseError(
             f"Aleph {context} response failed validation: {exc}"
         ) from exc
