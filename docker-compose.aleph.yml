@@ -67,9 +67,11 @@ services:
     volumes:
       - elasticsearch-data:/usr/share/elasticsearch/data
     environment:
-      # 512m heap is enough for dev (millions of docs is fine); production OLAF
-      # tunes this up.
-      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      # 1g heap. The OpenAleph person-name synonyms ruleset (~70k rules) needs
+      # more headroom than the previous 512m: with 512m, ES spent ~700ms/s in GC
+      # just loading the synonym filter and crashlooped before becoming healthy.
+      # Production OLAF tunes this up further.
+      - "ES_JAVA_OPTS=-Xms1g -Xmx1g"
       - "discovery.type=single-node"
       - "xpack.security.enabled=false"
       - "xpack.security.transport.ssl.enabled=false"
