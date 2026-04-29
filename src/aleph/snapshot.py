@@ -79,8 +79,23 @@ def snapshot_collection(client: AlephClient, collection_id: str) -> CorpusSnapsh
 
     rows_by_id: dict[str, ManifestRow] = {}
     suspicious_skips = 0
+    duplicate_yields = 0
 
     for entity in _iter_documents(client, collection_id):
+        if entity.id in rows_by_id:
+            # Same doc_id served twice across paginated calls. Aleph's
+            # default ordering is unstable across pages on a mutating
+            # corpus; ``_iter_documents`` requests ``sort=caption:asc`` to
+            # mitigate, but ties + concurrent writes can still drift.
+            # Log it loudly — silent dedup would let the manifest skip
+            # docs that drifted past the offset window during the
+            # reorder.
+            duplicate_yields += 1
+            log.warning(
+                "snapshot.duplicate_yield",
+                extra={"doc_id": entity.id, "collection_id": collection_id},
+            )
+            continue
         try:
             doc_text = client.get_document_text(entity.id)
         except NotFoundError:
@@ -113,12 +128,13 @@ def snapshot_collection(client: AlephClient, collection_id: str) -> CorpusSnapsh
             page_count=page_count,
         )
 
-    if suspicious_skips:
+    if suspicious_skips or duplicate_yields:
         log.warning(
             "snapshot.partial",
             extra={
                 "collection_id": collection_id,
                 "suspicious_skips": suspicious_skips,
+                "duplicate_yields": duplicate_yields,
                 "kept_rows": len(rows_by_id),
             },
         )
@@ -141,6 +157,17 @@ def _iter_documents(client: AlephClient, collection_id: str):
     response shape via the search() pydantic model. Aleph expands
     ``filter:schemata=Document`` to descendants (Pages, Image, PlainText, …),
     so a single filter covers every file-shaped entity.
+
+    ``sort=caption:asc`` is the strongest stable sort the Aleph + ES stack
+    permits without server-side config changes: ``_id`` isn't sortable in
+    modern ES without ``index.indices.id_field_data.enabled``, and the
+    EntitiesQuery defaults to ``SORT_DEFAULT=[]`` which produces unstable
+    ``_doc`` ordering across pages on a mutating corpus. ``caption`` is a
+    keyword-mapped FtM-derived field present on every Document descendant.
+    For investigative corpora ``caption`` resolves to ``fileName`` which is
+    effectively unique; ties fall back to ES default tiebreak (still
+    unstable on mutation, but the duplicate-yield detector in
+    ``snapshot_collection`` makes drift loud rather than silent.)
     """
     offset = 0
     while True:
@@ -148,6 +175,7 @@ def _iter_documents(client: AlephClient, collection_id: str):
             query="",
             collection_id=collection_id,
             schemata=["Document"],
+            sort="caption:asc",
             limit=_ENUM_PAGE_SIZE,
             offset=offset,
         )

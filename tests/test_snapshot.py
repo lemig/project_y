@@ -391,6 +391,104 @@ def test_snapshot_page_count_query_is_scoped_by_collection(caplog) -> None:
 # ---------------------------------------------------------------------------
 
 
+def test_snapshot_requests_stable_sort_during_enumeration() -> None:
+    """The Document enumeration must include ``sort=caption:asc`` so that
+    paginated reads against a mutating corpus stay reasonably stable.
+    Without it, Aleph's EntitiesQuery defaults to no sort, falling back to
+    unstable ES ``_doc`` ordering — pages can skip docs entirely under
+    concurrent writes."""
+    body = "alpha"
+    stub = _Stub(
+        listings=[[_doc_entity("doc-1", body)]],
+        entity_details={"doc-1": _doc_entity("doc-1", body)},
+    )
+    with _make_client(stub) as client:
+        snapshot_collection(client, "coll-1")
+
+    enumeration_calls = [
+        r
+        for r in stub.requests
+        if r.url.path == "/api/2/entities"
+        and "Document" in r.url.params.get_list("filter:schemata")
+    ]
+    assert len(enumeration_calls) >= 1
+    for call in enumeration_calls:
+        assert call.url.params.get("sort") == "caption:asc"
+
+
+def test_snapshot_detects_duplicate_yields_loudly(caplog) -> None:
+    """If pagination races with corpus mutation and Aleph yields the same
+    doc_id on two different pages, the dict-dedup absorbs the duplicate
+    silently. That same race likely DROPPED a different doc from the
+    listing — the manifest would be invisibly incomplete. Detection +
+    logging upgrades silent corruption to operator-visible warning."""
+
+    class DuplicatingStub(_Stub):
+        def __init__(self) -> None:
+            doc = _doc_entity("doc-1", "alpha")
+            super().__init__(
+                listings=[[doc], [doc]],
+                entity_details={"doc-1": doc},
+            )
+            self.calls = 0
+
+        def __call__(self, request: httpx.Request) -> httpx.Response:
+            self.requests.append(request)
+            path = request.url.path
+            params = request.url.params
+            if path.startswith("/api/2/entities/"):
+                return _json(self.entity_details["doc-1"])
+            if path == "/api/2/entities":
+                schemata = params.get_list("filter:schemata")
+                if "Page" in schemata:
+                    return _json(
+                        {"results": [], "total": 0, "limit": 1, "offset": 0}
+                    )
+                # First listing call: serve the doc with total=2 so the
+                # outer loop pages again. Second call: serve the SAME doc
+                # again (the simulated reorder).
+                self.calls += 1
+                if self.calls == 1:
+                    return _json(
+                        {
+                            "results": [self.entity_details["doc-1"]],
+                            "total": 2,
+                            "limit": 200,
+                            "offset": 0,
+                        }
+                    )
+                if self.calls == 2:
+                    return _json(
+                        {
+                            "results": [self.entity_details["doc-1"]],
+                            "total": 2,
+                            "limit": 200,
+                            "offset": 1,
+                        }
+                    )
+                return _json(
+                    {"results": [], "total": 2, "limit": 200, "offset": 2}
+                )
+            raise AssertionError(path)
+
+    stub = DuplicatingStub()
+    with _make_client(stub) as client:
+        with caplog.at_level("WARNING", logger="aleph.snapshot"):
+            snap = snapshot_collection(client, "coll-1")
+
+    # One unique doc kept, but the duplicate-yield warning fires.
+    assert snap.row_count == 1
+    duplicate_warnings = [
+        r for r in caplog.records if "snapshot.duplicate_yield" in r.message
+    ]
+    partial_warnings = [
+        r for r in caplog.records if "snapshot.partial" in r.message
+    ]
+    assert len(duplicate_warnings) == 1
+    assert duplicate_warnings[0].levelname == "WARNING"
+    assert len(partial_warnings) == 1
+
+
 def test_snapshot_walks_all_listing_pages() -> None:
     """Snapshot must page through `GET /entities` until the listing is
     exhausted. We size two pages with one doc each, served via offset/limit."""

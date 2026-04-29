@@ -187,6 +187,43 @@ def test_search_rejects_reserved_filter_keys() -> None:
         client.search("x", filters={"schemata": "Document"})
 
 
+def test_search_forwards_sort_param() -> None:
+    """``sort=caption:asc`` is the snapshot's stable-pagination guard. The
+    client must put it on the wire as ``?sort=caption:asc`` so Aleph's
+    SearchQueryParser picks it up."""
+    seen: dict[str, str] = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen["sort"] = request.url.params.get("sort", "")
+        return _json({"results": [], "total": 0, "limit": 50})
+
+    with _make_client(handler) as client:
+        client.search("", sort="caption:asc")
+
+    assert seen["sort"] == "caption:asc"
+
+
+def test_search_omits_sort_param_when_none() -> None:
+    seen: dict[str, list[str]] = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen["params"] = list(request.url.params.keys())
+        return _json({"results": [], "total": 0, "limit": 50})
+
+    with _make_client(handler) as client:
+        client.search("")
+
+    assert "sort" not in seen["params"]
+
+
+def test_search_rejects_empty_sort_string() -> None:
+    """``sort=""`` would slip an empty value past Aleph and silently fall
+    through to default ordering — caller almost certainly meant ``None``."""
+    client = _make_client(lambda r: _json({}))
+    with pytest.raises(ValueError, match="sort"):
+        client.search("x", sort="")
+
+
 def test_search_emits_repeated_schemata_filters() -> None:
     """Multiple ``schemata=[...]`` entries must all reach Aleph as repeated
     ``filter:schemata=<name>`` query params, not collapse to one."""
