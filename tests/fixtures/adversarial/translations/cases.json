@@ -1,0 +1,141 @@
+{
+  "$schema": "v2-adversarial-fluent-bad-translations-2026-04-29",
+  "doc": "15 fluent-bad-translation cases consumed by the fluent-bad-translation gate test (one of the six hard-gated bug-class tests in CLAUDE.md). Each entry is a non-EN source quote paired with a grammatically perfect but semantically wrong English translation and the correct one. The gate must treat fluent_bad_en as a failure even when it would pass a generic fluency / round-trip check, because the harm modes here are real OLAF case-killers: amount understatement, polarity inversion, false friends, fixed-expression literalism, modal inversion. Source langs: it, ro, fr, de, es (3 each).",
+  "cases": [
+    {
+      "id": "it_thousands_period_misread_as_decimal",
+      "source_lang": "it",
+      "source_quote": "Banca Intesa ha trasferito 120.000 EUR il 12 marzo 2024.",
+      "fluent_bad_en": "Banca Intesa transferred 120 EUR on March 12, 2024.",
+      "fluent_correct_en": "Banca Intesa transferred 120,000 EUR on March 12, 2024.",
+      "what_went_wrong": "Italian uses '.' as thousands separator. The fluent-bad translator interpreted '120.000' as a decimal '120.0' and dropped three zeros. Grammatically perfect English; financially catastrophic \u2014 three orders of magnitude off.",
+      "harm_class": "amount_understatement"
+    },
+    {
+      "id": "it_lost_negation_supplier_delivery",
+      "source_lang": "it",
+      "source_quote": "Il fornitore non ha consegnato la merce entro la data pattuita.",
+      "fluent_bad_en": "The supplier delivered the goods by the agreed date.",
+      "fluent_correct_en": "The supplier did not deliver the goods by the agreed date.",
+      "what_went_wrong": "Lost 'non'. Inverts the truth value of the claim. The bad output is a perfectly natural English sentence \u2014 no syntactic tell.",
+      "harm_class": "polarity_inversion"
+    },
+    {
+      "id": "it_date_format_ambiguity",
+      "source_lang": "it",
+      "source_quote": "Il contratto \u00e8 stato firmato il 03/04/2024.",
+      "fluent_bad_en": "The contract was signed on 04/03/2024.",
+      "fluent_correct_en": "The contract was signed on 3 April 2024.",
+      "what_went_wrong": "Italian dd/mm/yyyy renders as '03/04/2024' meaning 3 April. The bad output preserves the numeric form, but a US-English reader reads '04/03/2024' as 4 March \u2014 a one-month shift in case timing.",
+      "harm_class": "temporal_drift"
+    },
+    {
+      "id": "ro_thousands_period_misread_as_decimal",
+      "source_lang": "ro",
+      "source_quote": "Compania a primit subven\u021bii de 50.000 lei.",
+      "fluent_bad_en": "The company received subsidies of 50 lei.",
+      "fluent_correct_en": "The company received subsidies of 50,000 lei.",
+      "what_went_wrong": "Romanian uses '.' as thousands separator. Same shape of error as the Italian case but in lei. ~10 EUR vs ~10,000 EUR \u2014 order-of-magnitude understatement.",
+      "harm_class": "amount_understatement"
+    },
+    {
+      "id": "ro_lost_negation_payment_authorization",
+      "source_lang": "ro",
+      "source_quote": "Plata nu a fost autorizat\u0103 de director.",
+      "fluent_bad_en": "The payment was authorized by the director.",
+      "fluent_correct_en": "The payment was not authorized by the director.",
+      "what_went_wrong": "Lost 'nu'. The bad output exonerates the director instead of implicating them.",
+      "harm_class": "polarity_inversion"
+    },
+    {
+      "id": "ro_false_friend_actualmente",
+      "source_lang": "ro",
+      "source_quote": "Compania este actualmente \u00een lichidare.",
+      "fluent_bad_en": "The company is actually in liquidation.",
+      "fluent_correct_en": "The company is currently in liquidation.",
+      "what_went_wrong": "Romanian 'actualmente' means 'currently / at present', not 'actually / in fact'. The bad output flips a tense/aspect statement into a discourse-marker statement (with implication of doubt or surprise).",
+      "harm_class": "false_friend"
+    },
+    {
+      "id": "fr_societe_ecran_literal",
+      "source_lang": "fr",
+      "source_quote": "La transaction a \u00e9t\u00e9 achemin\u00e9e via une soci\u00e9t\u00e9 \u00e9cran \u00e0 Chypre.",
+      "fluent_bad_en": "The transaction was routed via a screen company in Cyprus.",
+      "fluent_correct_en": "The transaction was routed via a shell company in Cyprus.",
+      "what_went_wrong": "'Soci\u00e9t\u00e9 \u00e9cran' is a fixed expression meaning 'shell company'. Literal 'screen company' is not a recognised English term and obscures the fraud-typology signal that 'shell company' carries for an investigator.",
+      "harm_class": "fixed_expression_literalism"
+    },
+    {
+      "id": "fr_thin_space_thousands",
+      "source_lang": "fr",
+      "source_quote": "Le contrat porte sur un montant de 2 500 000 \u20ac.",
+      "fluent_bad_en": "The contract is for an amount of 2.5 EUR.",
+      "fluent_correct_en": "The contract is for an amount of 2,500,000 EUR.",
+      "what_went_wrong": "French uses regular or thin space as thousands separator. The bad translator collapsed the spaces into a decimal \u2014 six orders of magnitude understatement (2.5 vs 2,500,000).",
+      "harm_class": "amount_understatement"
+    },
+    {
+      "id": "fr_lost_refusal_minister",
+      "source_lang": "fr",
+      "source_quote": "Le ministre a refus\u00e9 d'octroyer la subvention.",
+      "fluent_bad_en": "The minister granted the subsidy.",
+      "fluent_correct_en": "The minister refused to grant the subsidy.",
+      "what_went_wrong": "Verb 'refuser' dropped entirely. The bad output reverses a regulatory decision.",
+      "harm_class": "polarity_inversion"
+    },
+    {
+      "id": "de_briefkastenfirma_literal",
+      "source_lang": "de",
+      "source_quote": "Die Briefkastenfirma in Vaduz war Teil der Struktur.",
+      "fluent_bad_en": "The mailbox company in Vaduz was part of the structure.",
+      "fluent_correct_en": "The shell company in Vaduz was part of the structure.",
+      "what_went_wrong": "'Briefkastenfirma' literally is 'letter-box firm' but its lexicalised English equivalent is 'shell company'. 'Mailbox company' is grammatical English but isn't a fraud-typology term and doesn't trigger downstream PEP/sanctions heuristics that key off 'shell company'.",
+      "harm_class": "fixed_expression_literalism"
+    },
+    {
+      "id": "de_decimal_comma_thousands_period_inverted",
+      "source_lang": "de",
+      "source_quote": "Die Rechnung betr\u00e4gt 1.000,50 EUR.",
+      "fluent_bad_en": "The invoice totals 1.0005 EUR.",
+      "fluent_correct_en": "The invoice totals 1,000.50 EUR.",
+      "what_went_wrong": "German uses '.' as thousands separator and ',' as decimal \u2014 inverted from EN-US. The bad translator concatenated the digits across both separators, producing '1.0005' (about one cent vs about one thousand euros).",
+      "harm_class": "amount_understatement"
+    },
+    {
+      "id": "de_modal_darf_erst_nach_inverted",
+      "source_lang": "de",
+      "source_quote": "Die Zahlung darf erst nach Genehmigung erfolgen.",
+      "fluent_bad_en": "The payment must be made before approval.",
+      "fluent_correct_en": "The payment may only be made after approval.",
+      "what_went_wrong": "'darf erst nach' = 'may only after'. The bad output collapses 'darf' to 'must' and 'erst nach' to 'before' \u2014 both flipped \u2014 producing an instruction to pay BEFORE approval, the opposite of the source.",
+      "harm_class": "modal_inversion"
+    },
+    {
+      "id": "es_empresa_fantasma_literal",
+      "source_lang": "es",
+      "source_quote": "Los fondos pasaron por una empresa fantasma en Panam\u00e1.",
+      "fluent_bad_en": "The funds passed through a ghost company in Panama.",
+      "fluent_correct_en": "The funds passed through a shell company in Panama.",
+      "what_went_wrong": "'Empresa fantasma' is the standard Spanish term for shell/front company. 'Ghost company' is grammatical but not a fraud-typology term in English; same downstream-typology loss as the French/German cases.",
+      "harm_class": "fixed_expression_literalism"
+    },
+    {
+      "id": "es_decimal_comma_thousands_period_concatenated",
+      "source_lang": "es",
+      "source_quote": "El importe total fue de 30.000,75 \u20ac.",
+      "fluent_bad_en": "The total amount was 30.0075 EUR.",
+      "fluent_correct_en": "The total amount was 30,000.75 EUR.",
+      "what_went_wrong": "Spanish (continental EU style) uses '.' as thousands separator and ',' as decimal. Concatenation of the two gives '30.0075' \u2014 three orders of magnitude understatement.",
+      "harm_class": "amount_understatement"
+    },
+    {
+      "id": "es_lost_negation_director_authorization",
+      "source_lang": "es",
+      "source_quote": "El director no autoriz\u00f3 la transferencia.",
+      "fluent_bad_en": "The director authorized the transfer.",
+      "fluent_correct_en": "The director did not authorize the transfer.",
+      "what_went_wrong": "Lost 'no'. Same polarity-inversion pattern as the it/ro/fr cases \u2014 produces an exonerating statement instead of an inculpating one.",
+      "harm_class": "polarity_inversion"
+    }
+  ]
+}
