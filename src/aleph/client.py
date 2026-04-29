@@ -282,7 +282,12 @@ class AlephClient:
 
     # -- low-level ---------------------------------------------------------
 
-    def _get(self, path: str, *, params: dict[str, Any] | None = None) -> Any:
+    def _get(
+        self,
+        path: str,
+        *,
+        params: dict[str, Any] | list[tuple[str, Any]] | None = None,
+    ) -> Any:
         try:
             response = self._http.get(path, params=params)
         except httpx.RequestError as exc:
@@ -297,6 +302,8 @@ class AlephClient:
         query: str,
         *,
         collection_id: str | None = None,
+        schemata: list[str] | None = None,
+        filters: dict[str, str] | None = None,
         limit: int = 50,
         offset: int = 0,
     ) -> SearchResults:
@@ -306,15 +313,38 @@ class AlephClient:
         ``filter:collection_id`` query param. Aleph caps ``limit`` at 10_000;
         we do not enforce that here so future quota changes don't require a
         client release.
+
+        ``schemata`` adds ``filter:schemata=<name>`` for each entry — Aleph
+        expands to descendants, so ``["Document"]`` matches every file-shaped
+        entity (Pages, Image, PlainText, …). ``filters`` lets the caller add
+        any other ``filter:*`` param (e.g. ``{"properties.document": doc_id}``
+        becomes ``filter:properties.document=<doc_id>``). Reserved ``filter:``
+        keys (``collection_id``, ``schemata``) are rejected — use the dedicated
+        kwargs instead so the call site is greppable.
         """
         if limit < 1:
             raise ValueError("limit must be >= 1")
         if offset < 0:
             raise ValueError("offset must be >= 0")
 
-        params: dict[str, Any] = {"q": query, "limit": limit, "offset": offset}
+        params: list[tuple[str, Any]] = [
+            ("q", query),
+            ("limit", limit),
+            ("offset", offset),
+        ]
         if collection_id is not None:
-            params["filter:collection_id"] = collection_id
+            params.append(("filter:collection_id", collection_id))
+        if schemata:
+            for schema in schemata:
+                params.append(("filter:schemata", schema))
+        if filters:
+            for key, value in filters.items():
+                if key in {"collection_id", "schemata"}:
+                    raise ValueError(
+                        f"filter key '{key}' is reserved — use the dedicated "
+                        "search() kwarg instead"
+                    )
+                params.append((f"filter:{key}", value))
 
         payload = self._get("/entities", params=params)
         return _parse_model(SearchResults, payload, context="search")
