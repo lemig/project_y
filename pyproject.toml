@@ -27,7 +27,7 @@ packages = ["src/agent", "src/aleph", "src/audit", "src/schema", "src/skills", "
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]
-testpaths = ["tests"]
+testpaths = ["tests", "skills"]
 # Integration tests hit either a live LLM endpoint (DeepAgentsHarness) or the
 # local Aleph dev stack (bin/dev-up). Run them explicitly with
 # `pytest -m integration`; default runs exclude them.
