@@ -1,7 +1,7 @@
 ---
 name: summarize-by-entity
 version: v1
-owner: m.cabero@olaf.eu
+owner: miguel.cabero@ec.europa.eu
 resolver: (?i)\b(?:summari[sz]e|summary|profile|dossier|background|what\s+(?:do|did|have)\s+we\s+(?:know|learned?))\b.*?\b(?:about|on|of|for|each\s+entity|per\s+entity|by\s+entity|entit(?:y|ies))\b
 output_schema_ref: schema.note.Note
 verifier: verifier.substring_quote
@@ -132,6 +132,25 @@ fraud-examination practice (see References).
 `tuple[Note, ...]` — exactly one `Note` per resolved canonical entity.
 Each `Note` validates against `schema.note.Note` and carries ≥ 1 `Quote`
 that the substring quote verifier accepts.
+
+## Airgap behavior
+
+OLAF's production environment is air-gapped. This skill is offline-first by
+design:
+
+- **Zero network I/O at runtime.** Entity resolution (`/api/2/entities`,
+  `/api/2/match`) and full-text search hit the **local** Aleph instance only,
+  scoped to the per-investigation corpus snapshot.
+- **Translation is local by design.** When `source_lang != "en"` and the
+  harness's translation hook is wired (planned v2 work — not yet implemented
+  in `src/agent/`), it must route through the same LLM endpoint configured by
+  `LLM_BASE_URL` (vLLM on OLAF GPUs in air-gapped prod, per `CLAUDE.md` "Dev
+  environment"). Until the hook lands, `quote_text_en` is `null` and
+  `translator_of_record` records the failure marker — never an external
+  translation API.
+- **Reference URLs.** The citations in *References* below are pointers to
+  where each source can be retrieved when online. They are documentation
+  for human readers, never fetched by the skill.
 
 ## References
 

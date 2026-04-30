@@ -61,7 +61,7 @@ def test_pinned_field_values() -> None:
     fm = _load_frontmatter()
     assert fm.name == "narrate-fraud-pattern"
     assert fm.version == "v1"
-    assert fm.owner == "m.cabero@olaf.eu"
+    assert fm.owner == "miguel.cabero@ec.europa.eu"
     assert fm.output_schema_ref == "schema.note.Note"
     assert fm.verifier == "verifier.substring_quote"
     assert fm.tests_dir == "skills/narrate-fraud-pattern/tests"

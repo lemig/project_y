@@ -1,7 +1,7 @@
 ---
 name: cross-reference-pep
 version: v1
-owner: m.cabero@olaf.eu
+owner: miguel.cabero@ec.europa.eu
 resolver: (?i)\b(pep|peps|politically[-\s]exposed[-\s]person(s)?|sanctions?|sanction[-\s]list|sanctions[-\s]screening|watch[-\s]?list|watchlist|adverse[-\s]media|kyc|cdd|edd|due[-\s]diligence|screen(ing)?|opensanctions|wolfsberg|fatf|beneficial[-\s]owner(s)?|ubo|director(s)?|officer(s)?|shareholder(s)?|counterpart(y|ies)|client(s)?|individual(s)?|natural[-\s]person(s)?|legal[-\s]person(s)?|company|companies|corporation(s)?|entit(y|ies))\b
 output_schema_ref: schema.note.Note
 verifier: verifier.substring_quote
@@ -183,6 +183,26 @@ itself is markdown-only methodology.)
    triggers up to 3 retries (regenerate the quote with a different
    offset window); after the third failure, the Note is dropped and
    the drop is logged with reason. (CLAUDE.md rule 5.)
+
+## Airgap behavior
+
+OLAF's production environment is air-gapped. This skill is offline-first by
+design, in both v2 and v3:
+
+- **v2 (placeholder).** Zero network I/O. The skill only flags entities for
+  later screening; no HTTP call to any PEP/sanctions data source.
+- **v3 (planned).** The OpenSanctions data is consumed via its **bulk index**
+  (FtM-format, downloadable, freely redistributable), loaded into a local
+  read-only index that the harness pins as part of the per-investigation
+  reference snapshot (same lifecycle as the corpus snapshot, premise 8 of
+  `CLAUDE.md`). The skill queries that local index — it does **not** call
+  `api.opensanctions.org` at runtime.
+- **Refresh model.** New OpenSanctions / OFAC / EU / UN list versions are
+  imported via a separate, human-gated bundle update, not via on-demand
+  HTTP. The investigation records the bundle version it ran against.
+- **Reference URLs.** The links in *References* below are pointers to where
+  each source can be retrieved when online. They are documentation for
+  human readers, never fetched by the skill.
 
 ## What this skill explicitly does NOT do (v2)
 

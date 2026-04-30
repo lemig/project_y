@@ -80,5 +80,8 @@ def test_owner_is_olaf_email() -> None:
     parsed = yaml.safe_load(_read_frontmatter_text())
     owner = parsed["owner"]
     assert "@" in owner, f"owner must be an email, got {owner!r}"
-    # Skill is OLAF-owned per CLAUDE.md; the address points to the OLAF maintainer.
-    assert owner.endswith("@olaf.eu"), f"owner must be an @olaf.eu address, got {owner!r}"
+    # Skill is OLAF-owned per CLAUDE.md; the address points to the OLAF maintainer
+    # at the European Commission (ec.europa.eu).
+    assert owner.endswith("@ec.europa.eu"), (
+        f"owner must be a Commission (@ec.europa.eu) address, got {owner!r}"
+    )

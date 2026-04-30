@@ -1,7 +1,7 @@
 ---
 name: detect-procurement-collusion
 version: v1
-owner: m.cabero@olaf.eu
+owner: miguel.cabero@ec.europa.eu
 resolver: (?i)\b(bid[\s-]?rigg(?:ing|ed)|tender[\s-]?(?:rigg(?:ing|ed)|collusion)|(?:procurement|tender|public[\s-]contract)[\s-]?(?:fraud|collusion|rigging|cartel)|collusive[\s-]+(?:bid|bidder|bidding|tender(?:ing)?)s?|(?:cover|complementary|courtesy|phantom|suppressed?)[\s-]+bid(?:ding|s|ders?)?|bid[\s-]+rotation)\b
 output_schema_ref: schema.note.Note
 verifier: verifier.substring_quote
@@ -24,31 +24,49 @@ distributable under EUPL v1.2 / Apache 2.0 publication. No OLAF-internal
 operational details. The investigator decides escalation; the skill produces
 quoted observations.
 
+## Airgap behavior
+
+OLAF's production environment is air-gapped. This skill is offline-first by
+design:
+
+- **Zero network I/O at runtime.** The skill reads documents from the
+  per-investigation Aleph corpus snapshot (local) and emits Notes; it never
+  fetches URLs.
+- **Methodology is in this file.** The signals catalogue is encoded inline
+  (sections A–D). External sources are *citations*, not runtime inputs.
+- **Reference URLs.** The links in *Sources cited* below are pointers to
+  where each source can be retrieved when online. Treat a dead link as a
+  citation-hygiene issue, not a runtime failure.
+
 ## Sources cited (all public)
 
-1. **OECD (2009).** *Guidelines for Fighting Bid Rigging in Public Procurement.*
-   https://www.oecd.org/competition/cartels/42851044.pdf — the canonical
-   public catalogue of bid-rigging schemes and warning signs.
-2. **OECD (2016).** *Preventing Corruption in Public Procurement.*
-   https://www.oecd.org/gov/ethics/Corruption-Public-Procurement-Brochure.pdf
-3. **ACFE.** *Fraud Examiners Manual* — Procurement Fraud Schemes
+1. **OECD (2009, 2025 update).** *Guidelines for Fighting Bid Rigging in
+   Public Procurement.* — the canonical public catalogue of bid-rigging
+   schemes and warning signs.
+   <https://www.oecd.org/en/publications/guidelines-for-fighting-bid-rigging-in-public-procurement_8cfeafbb-en.html>
+   (2025 update:
+   <https://www.oecd.org/en/publications/oecd-guidelines-for-fighting-bid-rigging-in-public-procurement-2025-update_cbe05a56-en.html>)
+2. **ACFE.** *Fraud Examiners Manual* — Procurement Fraud Schemes
    (collusion among contractors; collusion between contractor and employee).
-   https://www.acfe.com/fraud-resources/fraud-101-what-is-fraud
-4. **World Bank (2013).** *Fraud and Corruption Awareness Handbook.*
-   https://documents.worldbank.org/curated/en/100851468152707470
-5. **U4 Anti-Corruption Resource Centre.** *Identifying and reducing corruption
-   risks in public procurement.* https://www.u4.no/publications
-6. **UNODC (2013).** *Guidebook on anti-corruption in public procurement.*
-   https://www.unodc.org/documents/corruption/Publications/2013/Guidebook_on_anti-corruption_in_public_procurement_and_the_management_of_public_finances.pdf
-7. **FATF (2012, updated).** Recommendations on beneficial ownership transparency
+   <https://www.acfe.com/fraud-resources/fraud-101-what-is-fraud>
+3. **World Bank (2013).** *Fraud and Corruption Awareness Handbook.*
+   <https://documents.worldbank.org/curated/en/100851468152707470>
+4. **U4 Anti-Corruption Resource Centre.** Publications on corruption risks in
+   public procurement. <https://www.u4.no/publications>
+5. **UNODC (2013).** *Guidebook on anti-corruption in public procurement and
+   the management of public finances.*
+   <https://www.unodc.org/documents/corruption/Publications/2013/Guidebook_on_anti-corruption_in_public_procurement_and_the_management_of_public_finances.pdf>
+6. **FATF (2012, updated).** Recommendations on beneficial ownership transparency
    (relevant to common-ownership signals across bidders).
-   https://www.fatf-gafi.org/en/topics/beneficial-ownership.html
+   <https://www.fatf-gafi.org/en/topics/beneficial-ownership.html>
 
 ## Signals to detect
 
 The OECD catalogue (Source 1, pp. 4–8) groups bid-rigging schemes into four
 families. The signals below combine those schemes with documentary red flags
-from Sources 2–6. **Look for any of these. Each detected signal is one Note.**
+from Sources 2–5 (procurement-corruption literature) and Source 6 (FATF
+beneficial-ownership guidance). **Look for any of these. Each detected
+signal is one Note.**
 
 ### A. Bid suppression, complementary bidding, bid rotation, market allocation (OECD §2)
 

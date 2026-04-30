@@ -1,7 +1,7 @@
 ---
 name: narrate-fraud-pattern
 version: v1
-owner: m.cabero@olaf.eu
+owner: miguel.cabero@ec.europa.eu
 resolver: (?i)\b(narrat(?:e|ive|ion)|tell\s+the\s+story|write[\s\-]?up|1[\s\-]?page\s+(?:summary|narrative)|case\s+summary|summari[sz]e\s+the\s+(?:fraud|case|pattern|scheme|investigation))\b
 output_schema_ref: schema.note.Note
 verifier: verifier.substring_quote
@@ -161,6 +161,21 @@ a story is no more reliable than its least-supported assertion.
 - **Silent quote drop.** If an input note's quote is referenced in the
   prose but does not survive deduplication, the prose must be rewritten;
   do not leave a factual sentence with no surviving inherited Quote.
+
+## Airgap behavior
+
+OLAF's production environment is air-gapped. This skill is offline-first by
+construction — it is a pure-synthesis skill:
+
+- **Zero network I/O at runtime.** It does not read source documents and it
+  does not fetch URLs. It consumes upstream `Note`s (already grounded and
+  verified) and emits one synthesized `Note`.
+- **No re-translation, no re-verification.** Quotes are inherited from the
+  upstream notes byte-for-byte; failures previously logged upstream are
+  preserved as-is.
+- **Reference URLs.** The links in *References* below are pointers to where
+  each source can be retrieved when online. They are documentation for
+  human readers, never fetched by the skill.
 
 ## References (public sources)
 

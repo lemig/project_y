@@ -84,7 +84,9 @@ def test_frontmatter_owner_looks_like_olaf_email() -> None:
     # Loose check — the schema only requires non-empty; this guards against
     # accidentally shipping a placeholder like 'TODO'.
     assert "@" in parsed["owner"], "owner should be an email address"
-    assert parsed["owner"].endswith("@olaf.eu"), "owner should be an @olaf.eu address"
+    assert parsed["owner"].endswith("@ec.europa.eu"), (
+        "owner should be a Commission (@ec.europa.eu) address"
+    )
 
 
 def test_skill_body_is_substantive() -> None:
