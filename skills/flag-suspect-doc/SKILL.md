@@ -1,7 +1,7 @@
 ---
 name: flag-suspect-doc
 version: v1
-owner: m.cabero@olaf.eu
+owner: miguel.cabero@ec.europa.eu
 resolver: (?is)(?=.*\bdoc(?:ument)?s?\b)(?=.*\b(?:suspect(?:ed)?|suspicious|risky|high[-\s]risk|fraud(?:ulent)?|fraud[-\s]?likelihood|anomal(?:ous|y|ies)|red[-\s]flag(?:ged|s)?)\b).*
 output_schema_ref: schema.note.Note
 verifier: verifier.substring_quote
@@ -187,6 +187,28 @@ suffix), per the Note schema invariant. Never drop the quote silently.
 - Do NOT include OLAF-internal heuristics, case-specific knowledge, or
   classified indicators in this skill. Those belong in operational tooling
   outside the open-source-publishable methodology.
+
+## Airgap behavior
+
+OLAF's production environment is air-gapped. This skill is offline-first by
+design:
+
+- **Zero network I/O at runtime.** All metadata and content signals are
+  computed from documents in the local per-investigation Aleph corpus
+  snapshot.
+- **Reference data is snapshot-pinned.** The FATF "High-Risk Jurisdictions"
+  list, FATF "Increased Monitoring" list, EU "non-cooperative jurisdictions
+  for tax purposes" list, and any threshold tables are loaded from the
+  bundled reference data the harness pins at investigation start (same
+  lifecycle as the corpus snapshot, premise 8 of `CLAUDE.md`). The skill
+  does not reach out to `fatf-gafi.org`, `consilium.europa.eu`, etc. at
+  runtime.
+- **List unavailable → log + skip the signal.** Already documented in
+  *What this skill must NOT do* above: if a list is unavailable at run
+  time, the signal is skipped and the gap is logged. Never guess.
+- **Reference URLs.** The citations in *Sources* below are pointers to
+  where each source can be retrieved when online. They are documentation
+  for human readers, never fetched by the skill.
 
 ## Sources
 

@@ -51,7 +51,7 @@ def test_frontmatter_validates_against_pydantic_contract() -> None:
     assert fm.output_schema_ref == "schema.note.Note"
     assert fm.verifier == "verifier.substring_quote"
     assert fm.tests_dir == "skills/find-money-flow/tests"
-    assert "@" in fm.owner and "olaf" in fm.owner.lower()
+    assert "@" in fm.owner and fm.owner.lower().endswith("@ec.europa.eu")
 
 
 def test_frontmatter_keys_match_locked_set() -> None:

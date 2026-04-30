@@ -1,7 +1,7 @@
 ---
 name: find-money-flow
 version: v1
-owner: m.cabero@olaf.eu
+owner: miguel.cabero@ec.europa.eu
 resolver: (?i)\b(money[\s-]*flow|money[\s-]*trail|funds?[\s-]*flow|follow[\s-]+the[\s-]+money|trace[\s-]+(?:the[\s-]+)?(?:money|funds?|payments?|transfers?|wire(?:s)?|cash|capital)|trace[\s-]+(?:account|contract|invoice|iban)|wire[\s-]+trace|account[\s-]+to[\s-]+account|transaction[\s-]+chain)\b
 output_schema_ref: schema.note.Note
 verifier: verifier.substring_quote
@@ -125,6 +125,19 @@ Stop expanding a branch when ANY of the following holds:
   verbatim and let the reviewer normalize.
 - Do NOT infer a hop from entity co-occurrence alone; co-occurrence
   is not a transaction.
+
+## Airgap behavior
+
+OLAF's production environment is air-gapped. This skill is offline-first by
+design:
+
+- **Zero network I/O at runtime.** All hops are derived from documents in
+  the local per-investigation Aleph corpus snapshot.
+- **Methodology is in this file.** The placement/layering/integration model
+  and the stop conditions are encoded inline.
+- **Reference URLs.** The citations below are pointers to where each source
+  can be retrieved when online. They are documentation for human readers,
+  never fetched by the skill.
 
 ## Public-source citations
 

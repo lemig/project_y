@@ -36,7 +36,7 @@ _OTHER_HASH = "b" * 64
 _VALID_SKILL_MD = """---
 name: find-money-flow
 version: v1
-owner: m.cabero@olaf.eu
+owner: miguel.cabero@ec.europa.eu
 resolver: money|flow|trace
 output_schema_ref: schema.note.Note
 verifier: verifier.substring_quote
@@ -112,7 +112,7 @@ def test_load_skill_parses_frontmatter_and_pins_git_sha(tmp_path: Path) -> None:
     skill = h.load_skill("find-money-flow@v1")
 
     assert skill.skill_id == "find-money-flow@v1"
-    assert skill.frontmatter.owner == "m.cabero@olaf.eu"
+    assert skill.frontmatter.owner == "miguel.cabero@ec.europa.eu"
     assert skill.frontmatter.verifier == "verifier.substring_quote"
     assert skill.git_sha == _git_blob_sha1(path.read_bytes())
     assert "find-money-flow" in skill.body

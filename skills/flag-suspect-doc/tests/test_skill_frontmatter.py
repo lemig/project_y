@@ -99,10 +99,12 @@ class TestFrontmatter:
 
     def test_owner_is_olaf_address(self, parsed: tuple[dict[str, str], str]) -> None:
         fm, _ = parsed
-        # Soft contract: owners on OLAF skills carry an @olaf.eu address.
-        # If this changes (external contributor, etc.) flip the assertion
+        # Soft contract: owners on OLAF skills carry an @ec.europa.eu (Commission)
+        # address. If this changes (external contributor, etc.) flip the assertion
         # rather than letting it silently drift.
-        assert fm["owner"].endswith("@olaf.eu"), f"unexpected owner: {fm['owner']!r}"
+        assert fm["owner"].endswith("@ec.europa.eu"), (
+            f"unexpected owner: {fm['owner']!r}"
+        )
 
     def test_body_is_substantive(self, parsed: tuple[dict[str, str], str]) -> None:
         _, body = parsed

@@ -1,7 +1,7 @@
 ---
 name: find-shell-companies
 version: v1
-owner: m.cabero@olaf.eu
+owner: miguel.cabero@ec.europa.eu
 resolver: (?i)\b(shell|front|letterbox|mailbox|fictitious|nominee|UBO|beneficial[\s-]+owner(?:ship)?s?|opaque[\s-]+owner(?:ship)?s?|hidden[\s-]+owner(?:ship)?s?|mass[\s-]+incorporat(?:ion|ed)|registered[\s-]+agent)\b
 output_schema_ref: schema.note.Note
 verifier: verifier.substring_quote
@@ -39,8 +39,10 @@ fires on inference alone.
 
 The entity is registered in a jurisdiction that the FATF, OECD, and StAR
 literature flag as commonly misused for opaque corporate structures. A
-non-exhaustive starting set (verify against the live FATF / EU lists at
-investigation time, not from this file):
+non-exhaustive starting set (verify against the FATF / EU jurisdiction lists
+that were **bundled with the per-investigation corpus snapshot at
+investigation start** — never against a live URL; see *Airgap behavior*
+below):
 
 - British Virgin Islands, Cayman Islands, Bermuda, Bahamas, Anguilla,
   Turks & Caicos
@@ -148,6 +150,25 @@ For each entity that scores ≥ 1, emit exactly one `Note` shaped per
 - **Multilingual.** ~80% of OLAF cases are non-English. When the source
   document is non-English, the verbatim quote stays in source language and a
   translation is provided alongside; English-only narration is unacceptable.
+
+## Airgap behavior
+
+OLAF's production environment is air-gapped. This skill is offline-first by
+design:
+
+- **Zero network I/O at runtime.** All indicators are computed from
+  documents in the local per-investigation Aleph corpus snapshot.
+- **Reference data is snapshot-pinned.** FATF / EU / OECD jurisdiction lists
+  and known-mass-incorporation address tables are loaded from the bundled
+  reference data the harness pins at investigation start (same lifecycle as
+  the corpus snapshot, premise 8 of `CLAUDE.md`). The skill never reaches
+  out to fatf-gafi.org, ec.europa.eu, etc. at runtime.
+- **List unavailable → log + skip the indicator.** If a list is missing
+  from the bundle, the corresponding indicator does not fire and the gap is
+  recorded in `why_relevant` and the audit log. Never guess.
+- **Reference URLs.** The links in *Sources* below are pointers to where
+  each source can be retrieved when online. They are documentation for
+  human readers, never fetched by the skill.
 
 ## Sources (public methodology)
 
