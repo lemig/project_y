@@ -28,6 +28,10 @@ COMPOSE_ARGS="-f docker-compose.aleph.yml"
 if [ -f docker-compose.yml ]; then
   COMPOSE_ARGS="${COMPOSE_ARGS} -f docker-compose.yml"
 fi
+# Match dev-up: opt back into the auto-loaded override when one is present.
+if [ -f docker-compose.override.yml ]; then
+  COMPOSE_ARGS="${COMPOSE_ARGS} -f docker-compose.override.yml"
+fi
 
 if [ "$PURGE" -eq 1 ]; then
   echo "Stopping AND PURGING volumes for workspace '${WORKSPACE_NAME}' (COMPOSE_PROJECT_NAME=${COMPOSE_PROJECT_NAME})..."

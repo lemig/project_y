@@ -29,6 +29,11 @@ COMPOSE_ARGS="-f docker-compose.aleph.yml"
 if [ -f docker-compose.yml ]; then
   COMPOSE_ARGS="${COMPOSE_ARGS} -f docker-compose.yml"
 fi
+# Compose's automatic loading of docker-compose.override.yml is suppressed
+# whenever -f is used, so opt back in explicitly when one is present.
+if [ -f docker-compose.override.yml ]; then
+  COMPOSE_ARGS="${COMPOSE_ARGS} -f docker-compose.override.yml"
+fi
 
 echo "Starting project_y dev environment for workspace '${WORKSPACE_NAME}'..."
 echo "  COMPOSE_PROJECT_NAME = ${COMPOSE_PROJECT_NAME}"
