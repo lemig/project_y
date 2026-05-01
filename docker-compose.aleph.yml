@@ -160,9 +160,14 @@ services:
     command: procrastinate worker -q ingest --concurrency 2
     hostname: ingest
     tmpfs: /tmp
+    # Match upstream openaleph/openaleph reference docker-compose: archive-data
+    # is mounted at /data (the ARCHIVE_PATH default in the ingest-file image).
+    # Earlier this stack mounted ./data:/data + archive-data:/archive, which
+    # silently broke ingestion — ingest-file looked for blobs at /data
+    # (the empty staging dir) instead of /archive (the actual archive volume),
+    # so every ingest job ran in <20ms and emitted 0 entities.
     volumes:
-      - ./data:/data
-      - archive-data:/archive
+      - archive-data:/data
     depends_on:
       aleph-init:
         condition: service_completed_successfully

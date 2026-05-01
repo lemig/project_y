@@ -112,7 +112,7 @@ else
   echo "server/.env already exists — skipping."
 fi
 
-# --- aleph.env.docker: per-workspace, generate fresh ALEPH_SECRET_KEY ---
+# --- aleph.env.docker: per-workspace, generate fresh ALEPH_SECRET_KEY + ALEPH_UI_URL ---
 if [ ! -f aleph.env.docker ]; then
   if [ ! -f aleph.env.docker.example ]; then
     echo "Warning: aleph.env.docker.example not found. Skipping aleph.env.docker setup."
@@ -126,7 +126,16 @@ if [ ! -f aleph.env.docker ]; then
     else
       sed -i "s|^ALEPH_SECRET_KEY=.*|ALEPH_SECRET_KEY=${SECRET}|" aleph.env.docker
     fi
-    echo "Created aleph.env.docker with a fresh ALEPH_SECRET_KEY for this workspace."
+    # Substitute ALEPH_UI_URL with this workspace's host-facing UI port. The
+    # default in the example is the UI container's internal port (8080), which
+    # the browser cannot reach; using the host port makes PDF preview / Download
+    # work end-to-end.
+    if sed -i '' "s|^ALEPH_UI_URL=.*|ALEPH_UI_URL=http://localhost:${ALEPH_UI_PORT}/|" aleph.env.docker 2>/dev/null; then
+      :
+    else
+      sed -i "s|^ALEPH_UI_URL=.*|ALEPH_UI_URL=http://localhost:${ALEPH_UI_PORT}/|" aleph.env.docker
+    fi
+    echo "Created aleph.env.docker with a fresh ALEPH_SECRET_KEY and ALEPH_UI_URL for this workspace."
   fi
 else
   echo "aleph.env.docker already exists — skipping."
