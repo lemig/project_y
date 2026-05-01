@@ -50,6 +50,20 @@ echo ""
 # shellcheck disable=SC2086
 docker compose ${COMPOSE_ARGS} up -d --remove-orphans
 
+# Detect port-drift from out-of-band `docker compose ... up --force-recreate`
+# runs that didn't source .env.ports first. Without ALEPH_API_PORT exported,
+# compose falls back to the default in docker-compose.aleph.yml and api ends up
+# bound to the wrong host port until the next clean dev-down/dev-up cycle.
+ACTUAL_API=$(docker inspect "${COMPOSE_PROJECT_NAME}-api-1" \
+  --format '{{(index (index .NetworkSettings.Ports "8000/tcp") 0).HostPort}}' 2>/dev/null || true)
+if [ -n "${ACTUAL_API:-}" ] && [ "${ACTUAL_API}" != "${ALEPH_API_PORT}" ]; then
+  echo ""
+  echo "Notice: api was bound to host port ${ACTUAL_API}, expected ${ALEPH_API_PORT}."
+  echo "        Recreating api to restore the correct mapping..."
+  # shellcheck disable=SC2086
+  docker compose ${COMPOSE_ARGS} up -d --force-recreate api
+fi
+
 echo ""
 echo "Stack is starting up. First start runs DB migrations (~1-2 min)."
 echo "Use 'bin/dev-status' to see health, 'bin/dev-down' to stop."
